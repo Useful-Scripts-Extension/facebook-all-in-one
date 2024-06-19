@@ -173,7 +173,7 @@ export async function getAllMessages() {
 export async function findFirstMessage({ friendUid, startTime, endTime, progress }) {
     let mid = 1e3 * Math.round((startTime + endTime) / 2 / 1e3);
     progress?.(mid);
-    let msgs = await isExistMessage({ friendUid, cursor: mid, limit: 1 });
+    let msgs = await isExistMessage({ friendUid, before: mid, limit: 1 });
 
     if (Math.abs(endTime - startTime) <= 1e3) return msgs;
 
@@ -213,13 +213,13 @@ export async function getMessagesAfter({ friendUid, msgId, direction = 'down', l
  * Checks if a message exists based on the provided cursor, limit, and friend UID.
  *
  * @param {Object} options - The options for checking the message existence.
- * @param {number} options.cursor - The cursor used to fetch the message.
- * @param {number} [options.limit=50] - The maximum number of messages to fetch.
  * @param {string} options.friendUid - The UID of the friend in the conversation.
+ * @param {string} [options.before=null] - The cursor to fetch messages before this ID.
+ * @param {number} [options.limit=50] - The maximum number of messages to fetch.
  * @return {Promise<Array|undefined>} A promise that resolves to an array of message nodes if the message exists,
  * or undefined if it doesn't.
  */
-export async function isExistMessage({ friendUid, cursor = null, limit = 50 }) {
+export async function isExistMessage({ friendUid, before = null, limit = 50 }) {
     const res = await fetchGraphQl(
         {
             queries: {
@@ -230,7 +230,7 @@ export async function isExistMessage({ friendUid, cursor = null, limit = 50 }) {
                         message_limit: limit,
                         load_messages: 1,
                         load_read_receipts: !0,
-                        before: cursor,
+                        ...(before && { before }),
                     },
                 },
             },

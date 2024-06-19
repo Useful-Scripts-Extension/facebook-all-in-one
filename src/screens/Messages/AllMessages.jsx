@@ -35,6 +35,7 @@ export default function AllMessages() {
                 console.log(data);
                 if (!data?.length) return message.error(t('No data to show'));
                 setMessages(data);
+                message.destroy();
                 message.success(t('Fetch completed'));
             })
             .catch(err => {
@@ -72,7 +73,7 @@ export default function AllMessages() {
 
     const onClickFirstMessages = record => () => {
         navigate('/messages/first', {
-            state: { threadId: record.id },
+            state: { friendUid: record.id || record?.participants?.[0]?.id },
         });
     };
 
@@ -218,16 +219,14 @@ export default function AllMessages() {
             key: 'download',
             render: (text, record, index) => (
                 <>
-                    {!record.isGroup ? (
-                        <Tooltip title={t('First messages')}>
-                            <Button
-                                type="primary"
-                                icon={<i className="fa-solid fa-clock-rotate-left"></i>}
-                                style={{ marginRight: '5px' }}
-                                onClick={onClickFirstMessages(record)}
-                            ></Button>
-                        </Tooltip>
-                    ) : null}
+                    <Tooltip title={t('First messages')}>
+                        <Button
+                            type="primary"
+                            icon={<i className="fa-solid fa-clock-rotate-left"></i>}
+                            style={{ marginRight: '5px' }}
+                            onClick={onClickFirstMessages(record)}
+                        ></Button>
+                    </Tooltip>
                     <Tooltip title={t('Download')}>
                         <Button
                             type="primary"
