@@ -282,17 +282,18 @@ function MessageItem({ message, myProfile, friendProfile }) {
                 style={{ width: '100%' }}
             >
                 {info.text && (
-                    <Typography.Text
+                    <Typography.Paragraph
                         style={{
                             display: 'block',
                             wordBreak: 'break-word',
                             padding: '8px 12px',
                             borderRadius: 24,
                             backgroundColor: info.isMyMessage ? '#0084ff' : '#303030',
+                            whiteSpace: 'pre-line',
                         }}
                     >
                         {info.text}
-                    </Typography.Text>
+                    </Typography.Paragraph>
                 )}
                 {info.sticker && <Image width={150} src={info.sticker} />}
                 {info.attachment?.map((attachment, index) => {
