@@ -218,22 +218,24 @@ export default function AllMessages() {
             key: 'download',
             render: (text, record, index) => (
                 <>
-                    <Tooltip placement="topLeft" title={t('First messages')}>
-                        <Button
-                            type="primary"
-                            icon={<i className="fa-solid fa-clock-rotate-left"></i>}
-                            style={{ marginRight: '5px' }}
-                            onClick={onClickFirstMessages(record)}
-                        ></Button>
-                    </Tooltip>
-                    <Tooltip placement="topLeft" title={t('Download')}>
+                    {!record.isGroup ? (
+                        <Tooltip title={t('First messages')}>
+                            <Button
+                                type="primary"
+                                icon={<i className="fa-solid fa-clock-rotate-left"></i>}
+                                style={{ marginRight: '5px' }}
+                                onClick={onClickFirstMessages(record)}
+                            ></Button>
+                        </Tooltip>
+                    ) : null}
+                    <Tooltip title={t('Download')}>
                         <Button
                             type="primary"
                             icon={<i className="fa-solid fa-download"></i>}
                             style={{ marginRight: '5px' }}
                         ></Button>
                     </Tooltip>
-                    <Tooltip placement="topLeft" title={t('Delete')}>
+                    <Tooltip title={t('Delete')}>
                         <Button
                             type="primary"
                             danger

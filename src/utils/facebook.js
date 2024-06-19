@@ -1,5 +1,5 @@
 import lodash_get from 'lodash/get';
-import { sendMessage } from './extesion';
+import { fetchExtension, sendMessage } from './extesion';
 
 // #region helper
 export function wrapGraphQlParams(params = {}) {
@@ -35,6 +35,8 @@ export function fetchGraphQl(params = {}, url = '') {
     });
 }
 // #endregion
+
+// #region user
 
 export function getUserAvatarFromUid(uid) {
     return `https://graph.facebook.com/${uid}/picture?height=500&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
@@ -99,6 +101,23 @@ export function getFbUrlFromId(id) {
     return `https://fb.com/${id}`;
 }
 
+export async function getUidFromUrl(url) {
+    try {
+        let text = await fetchExtension(url);
+        if (text) {
+            let uid = /(?<="userID":")(.\d+?)(?=")/.exec(text);
+            if (uid?.length) {
+                return uid[0];
+            }
+        }
+    } catch (e) {
+        // ignore
+    }
+    return null;
+}
+
+// #endregion
+
 // #region messages
 
 /**
@@ -145,6 +164,7 @@ export async function getAllMessages() {
  * Finds the first message within a given time range.
  *
  * @param {Object} options - The options for finding the first message.
+ * @param {string} options.friendUid - The UID of the friend in the conversation.
  * @param {number} options.startTime - The start time of the range.
  * @param {number} options.endTime - The end time of the range.
  * @param {Function} [options.progress] - Optional callback function to report progress.
@@ -157,8 +177,9 @@ export async function findFirstMessage({ friendUid, startTime, endTime, progress
 
     if (Math.abs(endTime - startTime) <= 1e3) return msgs;
 
-    if (msgs?.length) return await findFirstMessage({ friendUid, startTime, endTime: mid - 1 });
-    else return await findFirstMessage({ friendUid, startTime: mid + 1, endTime });
+    if (msgs?.length)
+        return await findFirstMessage({ friendUid, startTime, endTime: mid - 1, progress });
+    else return await findFirstMessage({ friendUid, startTime: mid + 1, endTime, progress });
 }
 
 /**
@@ -171,17 +192,18 @@ export async function findFirstMessage({ friendUid, startTime, endTime, progress
  * @return {Promise<Object|Error>} A promise that resolves to the GraphQL payload of the messages,
  * or an error if there are no results.
  */
-async function getMessagesAfter({ friendUid, msgId, direction = 'down', limit = 50 }) {
+export async function getMessagesAfter({ friendUid, msgId, direction = 'down', limit = 50 }) {
     const res = await fetchGraphQl(
         {
             other_user_fbid: friendUid,
             message_id: msgId,
             direction,
             limit,
+            __a: 1,
         },
         'https://www.facebook.com/ajax/mercury/search_context.php'
     );
-    var n = JSON.parse(res.substr(9)),
+    const n = JSON.parse(res.substr(9)),
         t = n.payload.graphql_payload;
     if (t) return t;
     else return new Error('There is no results.');
@@ -197,23 +219,26 @@ async function getMessagesAfter({ friendUid, msgId, direction = 'down', limit = 
  * @return {Promise<Array|undefined>} A promise that resolves to an array of message nodes if the message exists,
  * or undefined if it doesn't.
  */
-async function isExistMessage({ friendUid, cursor, limit = 50 }) {
-    const res = await fetchGraphQl({
-        query: {
-            o0: {
-                doc_id: '1526314457427586',
-                query_params: {
-                    id: friendUid,
-                    message_limit: limit,
-                    load_messages: 1,
-                    load_read_receipts: !0,
-                    before: cursor,
+export async function isExistMessage({ friendUid, cursor = null, limit = 50 }) {
+    const res = await fetchGraphQl(
+        {
+            queries: {
+                o0: {
+                    doc_id: '1526314457427586',
+                    query_params: {
+                        id: friendUid,
+                        message_limit: limit,
+                        load_messages: 1,
+                        load_read_receipts: !0,
+                        before: cursor,
+                    },
                 },
             },
         },
-    });
+        'https://www.facebook.com/api/graphqlbatch/'
+    );
     try {
-        var n = JSON.parse(res.split('\n')[0]);
+        const n = JSON.parse(res.split('\n')[0]);
         if (n.o0.data.message_thread) return n.o0.data.message_thread.messages.nodes;
     } catch (i) {
         console.error(i.message);

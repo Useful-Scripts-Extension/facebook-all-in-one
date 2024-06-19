@@ -1,5 +1,17 @@
 import { ExtensionID } from '../constants';
 
+export function connectExtension() {
+    return sendMessage({ action: 'fb_bulkDownload_init' });
+}
+
+export function fetchExtension(url, options) {
+    return sendMessage({
+        action: 'fetch',
+        url,
+        options,
+    });
+}
+
 export function sendMessage(data) {
     return new Promise((resolve, reject) => {
         if (!window || !window?.chrome?.runtime)

@@ -7,7 +7,7 @@ import logo from './assets/logo.png';
 
 import useStore, { selectors } from './store';
 import { AllMessages, FirstMessages } from './screens/Messages';
-import { sendMessage } from './utils/extesion';
+import { connectExtension } from './utils/extesion';
 import { getUserInfoFromUid } from './utils/facebook';
 
 const { Header, Sider, Content, Footer } = Layout;
@@ -56,7 +56,7 @@ export default function MyApp() {
 
     useEffect(() => {
         console.log('init');
-        sendMessage({ action: 'fb_bulkDownload_init' })
+        connectExtension()
             .then(data => {
                 console.log(data);
                 getUserInfoFromUid(data.uid).then(info => {
