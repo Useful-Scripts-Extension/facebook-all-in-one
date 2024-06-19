@@ -208,6 +208,7 @@ export default function FirstMessages() {
             </Space>
             <Space
                 direction="vertical"
+                size={3}
                 style={{
                     width: '100%',
                     maxHeight: '70vh',
@@ -264,7 +265,7 @@ function MessageItem({ message, myProfile, friendProfile }) {
     const info = getMessageInfo(message, myProfile);
 
     return (
-        <div style={{ display: 'flex', alignItems: 'center', width: '100%', padding: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
             {info.isMyMessage && <div style={{ flex: 1 }}></div>}
             {!info.isMyMessage && (
                 <a href={getFbUrlFromId(info.sender.id)} target="_blank">
@@ -290,6 +291,7 @@ function MessageItem({ message, myProfile, friendProfile }) {
                             borderRadius: 24,
                             backgroundColor: info.isMyMessage ? '#0084ff' : '#303030',
                             whiteSpace: 'pre-line',
+                            margin: 0,
                         }}
                     >
                         {info.text}
