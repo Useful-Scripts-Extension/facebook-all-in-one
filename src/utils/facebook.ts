@@ -16,14 +16,7 @@ export function wrapGraphQlParams(params = {}) {
     return formBody.join('&');
 }
 
-/**
- * Fetches GraphQL data from the specified URL using the provided parameters.
- *
- * @param {Object|string} params - The parameters to be used in the GraphQL query. If a string is provided, it will be used as the query directly.
- * @param {string} [url=''] - The URL to send the GraphQL request to. Defaults to an empty string.
- * @return {Promise} A Promise that resolves with the response from the GraphQL request.
- */
-export function fetchGraphQl(params = {}, url = '') {
+export function fetchGraphQl(params: object | string = {}, url: string = ''): Promise<any> {
     let query = '';
     if (typeof params === 'string') query = '&q=' + encodeURIComponent(params);
     else query = wrapGraphQlParams(params);
@@ -38,11 +31,11 @@ export function fetchGraphQl(params = {}, url = '') {
 
 // #region user
 
-export function getUserAvatarFromUid(uid) {
+export function getUserAvatarFromUid(uid: string) {
     return `https://graph.facebook.com/${uid}/picture?height=500&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
 }
 
-export async function getEntityInfoFromId(entityID, context = 'DEFAULT') {
+export async function getEntityInfoFromId(entityID: string, context = 'DEFAULT') {
     let res = await fetchGraphQl({
         fb_api_req_friendly_name: 'CometHovercardQueryRendererQuery',
         variables: {
@@ -58,14 +51,23 @@ export async function getEntityInfoFromId(entityID, context = 'DEFAULT') {
     return JSON.parse(res);
 }
 
-/**
- * Retrieves user information from a given UID.
- *
- * @param {string} uid - The UID of the user.
- * @return {Promise<Object>} An object containing the user's information, including UID, gender, name, alternate name, avatar, and cover.
- * @throws {Error} If there is an error in fetching the GraphQL data.
- */
-export async function getUserInfoFromUid(uid) {
+export type UserInfoObject = {
+    uid: string;
+    gender?: string;
+    name?: string;
+    alternateName?: string;
+    avatar?: {
+        id: string;
+        link: string;
+        uri: string;
+    };
+    cover?: {
+        id: string;
+        link: string;
+        uri: string;
+    };
+};
+export async function getUserInfoFromUid(uid: string): Promise<UserInfoObject> {
     const text = await fetchGraphQl({
         fb_api_req_friendly_name: 'ProfileCometHeaderQuery',
         doc_id: '4159355184147969',
@@ -97,11 +99,11 @@ export async function getUserInfoFromUid(uid) {
     };
 }
 
-export function getFbUrlFromId(id) {
+export function getFbUrlFromId(id: string) {
     return `https://fb.com/${id}`;
 }
 
-export async function getUidFromUrl(url) {
+export async function getUidFromUrl(url: string) {
     try {
         let text = await fetchExtension(url);
         if (text) {
@@ -120,31 +122,68 @@ export async function getUidFromUrl(url) {
 
 // #region messages
 
-/**
- * Retrieves all messages from the viewer including message threads with participants, message count, and thread details.
- * @return {Array} An array of message thread objects with details like participants, message count, and thread type.
- */
-export async function getAllMessages() {
-    const res = await fetchGraphQl(
-        'viewer(){message_threads{count,nodes{customization_info{emoji,outgoing_bubble_color,participant_customizations{participant_id,nickname}},all_participants{nodes{messaging_actor{name,id,profile_picture}}},thread_type,name,messages_count,image,id}}}'
-    );
-    const msgData = JSON.parse(res);
-    console.log(msgData);
-    let { count: threadCount, nodes } = msgData.viewer.message_threads;
+export type MessageObject = {
+    id: string;
+    count: number;
+    recent: number;
+    type: string;
+    name: string;
+    participants: Array<{
+        id: string;
+        name: string;
+        avatar?: string;
+    }>;
+    url: string;
+    isGroup: boolean;
+    image?: string;
+};
+export async function getAllMessages(): Promise<Array<MessageObject>> {
+    const res = await Promise.all([
+        fetchGraphQl(
+            'viewer(){message_threads{count,nodes{customization_info{emoji,outgoing_bubble_color,participant_customizations{participant_id,nickname}},all_participants{nodes{messaging_actor{name,id,profile_picture}}},thread_type,name,messages_count,image,id}}}'
+        ).then(res => JSON.parse(res || '{}')),
+
+        fetchGraphQl(
+            {
+                queries: {
+                    o0: {
+                        doc_id: '1475048592613093',
+                        query_params: {
+                            limit: 500,
+                            before: Date.now(),
+                            tags: ['ARCHIVED'],
+                            includeDeliveryReceipts: true,
+                            includeSeqID: false,
+                        },
+                    },
+                },
+            },
+            'https://www.facebook.com/api/graphqlbatch/'
+        ).then(res => JSON.parse(res?.split('\n')?.[0] || '{}')?.o0?.data),
+    ]);
+    const nodes = res
+        .map(_ => _?.viewer?.message_threads?.nodes)
+        .filter(Boolean)
+        .flat();
     let data = nodes
         .map((node, i) => ({ ...node, recent: i })) // inject recent rank
         .map(node => {
             let participants = node.all_participants.nodes.map(p => ({
                 id: p.messaging_actor.id,
                 name: p.messaging_actor.name,
-                avatar: p.messaging_actor.profile_picture.uri,
-                avatar_large: getUserAvatarFromUid(p.messaging_actor.id),
+                avatar:
+                    p.messaging_actor.profile_picture?.uri ||
+                    p.messaging_actor.avatar?.big_image_src?.uri ||
+                    getUserAvatarFromUid(p.messaging_actor.id),
             }));
 
             let d = {
                 recent: node.recent,
                 type: node.thread_type,
-                id: atob(node.id)?.split(':')?.[1],
+                id:
+                    node.thread_key?.other_user_id ||
+                    node.thread_key?.thread_fbid ||
+                    (node.id ? atob(node.id)?.split(':')?.[1] : ''),
                 count: node.messages_count,
                 name: node.name || participants[0]?.name || '-no data-',
                 participants: participants,
@@ -156,24 +195,45 @@ export async function getAllMessages() {
                 isGroup: d.type === 'GROUP' || d.type === 'COMMUNITY_GROUP',
             };
         });
+    console.log(data);
 
     return data;
 }
 
-/**
- * Finds the first message within a given time range.
- *
- * @param {Object} options - The options for finding the first message.
- * @param {string} options.friendUid - The UID of the friend in the conversation.
- * @param {number} options.startTime - The start time of the range.
- * @param {number} options.endTime - The end time of the range.
- * @param {Function} [options.progress] - Optional callback function to report progress.
- * @return {Promise<Array>} A promise that resolves to an array of messages.
- */
-export async function findFirstMessage({ friendUid, startTime, endTime, progress }) {
+export async function getArchivedMessages(before = Date.now()) {
+    return fetchGraphQl(
+        {
+            queries: {
+                o0: {
+                    doc_id: '1475048592613093',
+                    query_params: {
+                        limit: 500,
+                        before: before,
+                        tags: ['ARCHIVED'],
+                        includeDeliveryReceipts: true,
+                        includeSeqID: false,
+                    },
+                },
+            },
+        },
+        'https://www.facebook.com/api/graphqlbatch/'
+    );
+}
+
+export async function findFirstMessage({
+    friendUid,
+    startTime,
+    endTime,
+    progress,
+}: {
+    friendUid: string;
+    startTime: number;
+    endTime: number;
+    progress?: Function;
+}): Promise<Array<any> | undefined> {
     let mid = 1e3 * Math.round((startTime + endTime) / 2 / 1e3);
     progress?.(mid);
-    let msgs = await isExistMessage({ friendUid, before: mid, limit: 1 });
+    let msgs = await getMessagesAtTimeCursor({ friendUid, time: mid, limit: 1 });
 
     if (Math.abs(endTime - startTime) <= 1e3) return msgs;
 
@@ -182,17 +242,17 @@ export async function findFirstMessage({ friendUid, startTime, endTime, progress
     else return await findFirstMessage({ friendUid, startTime: mid + 1, endTime, progress });
 }
 
-/**
- * Retrieves messages after a specific message ID from a Facebook conversation.
- *
- * @param {Object} options - The options for retrieving messages.
- * @param {string} options.msgId - The ID of the message to retrieve messages after.
- * @param {number} [options.limit=50] - The maximum number of messages to retrieve.
- * @param {string} options.friendUid - The UID of the friend in the conversation.
- * @return {Promise<Object|Error>} A promise that resolves to the GraphQL payload of the messages,
- * or an error if there are no results.
- */
-export async function getMessagesAfter({ friendUid, msgId, direction = 'down', limit = 50 }) {
+export async function getMessagesAfterMsgId({
+    friendUid,
+    msgId,
+    direction = 'down',
+    limit = 50,
+}: {
+    friendUid: string;
+    msgId: string;
+    direction?: 'down' | 'up';
+    limit?: number;
+}): Promise<Array<object> | Error> {
     const res = await fetchGraphQl(
         {
             other_user_fbid: friendUid,
@@ -209,17 +269,15 @@ export async function getMessagesAfter({ friendUid, msgId, direction = 'down', l
     else return new Error('There is no results.');
 }
 
-/**
- * Checks if a message exists based on the provided cursor, limit, and friend UID.
- *
- * @param {Object} options - The options for checking the message existence.
- * @param {string} options.friendUid - The UID of the friend in the conversation.
- * @param {string} [options.before=null] - The cursor to fetch messages before this ID.
- * @param {number} [options.limit=50] - The maximum number of messages to fetch.
- * @return {Promise<Array|undefined>} A promise that resolves to an array of message nodes if the message exists,
- * or undefined if it doesn't.
- */
-export async function isExistMessage({ friendUid, before = null, limit = 50 }) {
+export async function getMessagesAtTimeCursor({
+    friendUid,
+    time = null,
+    limit = 50,
+}: {
+    friendUid: string;
+    time?: null | number;
+    limit?: number;
+}): Promise<Array<any> | undefined> {
     const res = await fetchGraphQl(
         {
             queries: {
@@ -230,7 +288,7 @@ export async function isExistMessage({ friendUid, before = null, limit = 50 }) {
                         message_limit: limit,
                         load_messages: 1,
                         load_read_receipts: !0,
-                        ...(before && { before }),
+                        before: time,
                     },
                 },
             },
@@ -244,5 +302,9 @@ export async function isExistMessage({ friendUid, before = null, limit = 50 }) {
         console.error(i.message);
     }
 }
+
+// #endregion
+
+// #region friends
 
 // #endregion

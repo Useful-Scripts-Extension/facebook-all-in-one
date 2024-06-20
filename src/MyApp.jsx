@@ -9,6 +9,7 @@ import useStore, { selectors } from './store';
 import { AllMessages, FirstMessages } from './screens/Messages';
 import { connectExtension } from './utils/extesion';
 import { getUserInfoFromUid } from './utils/facebook';
+import Friends from './screens/Friends';
 
 const { Header, Sider, Content, Footer } = Layout;
 
@@ -99,7 +100,7 @@ export default function MyApp() {
             label: t('Friends'),
             icon: <i className="fa-solid fa-user-group"></i>,
             path: '/friends',
-            element: <PlaceHolder name="Friends" />,
+            element: <Friends />,
         },
         {
             label: t('Groups'),
