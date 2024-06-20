@@ -1,11 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Dropdown, Input, Row, Table, Tag, Space } from "antd";
-import { useTranslation } from "react-i18next";
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Dropdown, Input, Row, Table, Tag, Space } from 'antd';
+import { useTranslation } from 'react-i18next';
 
 export default function MyTable({
   data = [],
   columns = [],
-  size = "middle",
+  size = 'middle',
   expandable = false,
   selectable = false,
   searchable = false,
@@ -14,36 +14,34 @@ export default function MyTable({
   onClickReload,
   onClickExport,
   onClickDelete,
-  keyExtractor = (item) => item.key,
+  keyExtractor = item => item.key,
 }: Readonly<{
-  data: any[],
-  columns: any[],
-  size?: "small" | "middle" | "large",
-  expandable?: boolean,
-  selectable?: boolean,
-  searchable?: boolean,
-  loading?: boolean,
-  loadingOnReloadButton?: boolean,
-  onClickReload?: () => void,
-  onClickExport?: (data: any[], type: string) => void,
-  onClickDelete?: (data: any[]) => void,
-  keyExtractor?: (item: any) => string
+  data: any[];
+  columns: any[];
+  size?: 'small' | 'middle' | 'large';
+  expandable?: boolean;
+  selectable?: boolean;
+  searchable?: boolean;
+  loading?: boolean;
+  loadingOnReloadButton?: boolean;
+  onClickReload?: () => void;
+  onClickExport?: (data: any[], type: string) => void;
+  onClickDelete?: (data: any[]) => void;
+  keyExtractor?: (item: any) => string;
 }>) {
   const { t } = useTranslation();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [dataSelected, setDataSelected] = useState([]);
 
   const dataSearched = useMemo(
     () =>
       data
-        .filter((row) =>
+        .filter(row =>
           Object.values(row).some(
-            (value) =>
-              typeof value === "string" &&
-              value.toLowerCase().includes(search.toLowerCase())
+            value => typeof value === 'string' && value.toLowerCase().includes(search.toLowerCase())
           )
         )
-        .map((_) => ({
+        .map(_ => ({
           ..._,
           key: keyExtractor(_), // inject key for antd table
         })),
@@ -60,36 +58,32 @@ export default function MyTable({
   };
 
   const rowSelection = {
-    type: "checkbox",
+    type: 'checkbox',
     selectedRowKeys: dataSelected.map(keyExtractor),
     onChange: onSelectChange,
     selections: [
       {
-        key: "select_all",
-        text: t("Select all"),
+        key: 'select_all',
+        text: t('Select all'),
         onSelect: () => setDataSelected(currentDataSource.current),
       },
       {
-        key: "invert_selection",
-        text: t("Invert selection"),
+        key: 'invert_selection',
+        text: t('Invert selection'),
         onSelect: () =>
           setDataSelected(
             currentDataSource.current.filter(
-              (_) =>
-                !dataSelected.find((a) => keyExtractor(a) === keyExtractor(_))
+              _ => !dataSelected.find(a => keyExtractor(a) === keyExtractor(_))
             )
           ),
       },
       {
-        key: "unselect_all",
-        text: t("Unselect all"),
+        key: 'unselect_all',
+        text: t('Unselect all'),
         onSelect: () =>
           setDataSelected(
             dataSelected.filter(
-              (_) =>
-                !currentDataSource.current.find(
-                  (a) => keyExtractor(a) === keyExtractor(_)
-                )
+              _ => !currentDataSource.current.find(a => keyExtractor(a) === keyExtractor(_))
             )
           ),
       },
@@ -97,45 +91,49 @@ export default function MyTable({
   };
 
   const renderTitle = () => (
-    <Row justify="space-between" style={{ margin: "5px" }}>
+    <Row justify="space-between" style={{ margin: '5px' }}>
       <Row align="middle">
         <Space wrap>
-          {typeof onClickReload === "function" && (
+          {typeof onClickReload === 'function' && (
             <Button
               type="primary"
-              icon={loadingOnReloadButton
-                ? <i className="fa-solid fa-rotate-right fa-spin"></i>
-                : <i className="fa-solid fa-rotate-right"></i>}
+              icon={
+                loadingOnReloadButton ? (
+                  <i className="fa-solid fa-rotate-right fa-spin"></i>
+                ) : (
+                  <i className="fa-solid fa-rotate-right"></i>
+                )
+              }
               onClick={onClickReload}
             >
-              {t("Reload")}
+              {t('Reload')}
             </Button>
           )}
 
-          {typeof onClickExport === "function" && (
+          {typeof onClickExport === 'function' && (
             <Dropdown
               menu={{
                 items: [
-                  { key: "json", label: ".json" },
-                  { key: "csv", label: ".csv" },
+                  { key: 'json', label: '.json' },
+                  { key: 'csv', label: '.csv' },
                 ],
-                onClick: (e) => onClickExport(dataSelected, e.key),
+                onClick: e => onClickExport(dataSelected, e.key),
               }}
             >
               <Button type="primary" icon={<i className="fa-solid fa-download"></i>}>
-                {dataSelected?.length ? t("Export selected") : t("Export")}
+                {dataSelected?.length ? t('Export selected') : t('Export')}
               </Button>
             </Dropdown>
           )}
 
-          {typeof onClickDelete === "function" && (
+          {typeof onClickDelete === 'function' && (
             <Button
               danger
               type="primary"
               icon={<i className="fa-solid fa-trash-can"></i>}
               onClick={() => onClickDelete(dataSelected)}
             >
-              {t("Delete")}
+              {t('Delete')}
             </Button>
           )}
 
@@ -144,9 +142,9 @@ export default function MyTable({
               closable
               onClose={() => setDataSelected([])}
               color="processing"
-              style={{ marginLeft: "10px", fontWeight: "bold" }}
+              style={{ marginLeft: '10px', fontWeight: 'bold' }}
             >
-              {t("Selected {{count}} messages", { count: dataSelected.length })}
+              {t('Selected {{count}} messages', { count: dataSelected.length })}
             </Tag>
           ) : null}
         </Space>
@@ -154,8 +152,8 @@ export default function MyTable({
 
       {searchable && (
         <Input.Search
-          placeholder={t("Search")}
-          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t('Search')}
+          onChange={e => setSearch(e.target.value)}
           style={{ marginVertical: 16, maxWidth: 300 }}
         />
       )}
@@ -168,8 +166,8 @@ export default function MyTable({
       fixedHeader
       size={size}
       loading={loading}
-      scroll={{ y: "calc(100vh - 300px)", x: "max-content" }}
-      tableLayout='auto'
+      scroll={{ y: 'calc(100vh - 300px)', x: 'max-content' }}
+      tableLayout="auto"
       dataSource={dataSearched}
       columns={columns}
       showSorterTooltip={false}
@@ -180,12 +178,12 @@ export default function MyTable({
       expandable={expandable}
       title={renderTitle}
       pagination={{
-        position: ["bottomCenter"],
+        position: ['bottomCenter'],
         showSizeChanger: true,
-        showTotal: (total, range) => t("Total {{total}} items", { total }),
-        size: "default",
+        showTotal: (total, range) => t('Total {{total}} items', { total }),
+        size: 'default',
         //   simple: true,
-        style: { alignItems: "center" },
+        style: { alignItems: 'center' },
       }}
     />
   );

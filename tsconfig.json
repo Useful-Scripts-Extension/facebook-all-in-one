@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig.json",
+  "compilerOptions": {
+    "target": "ES5",
+    "lib": ["DOM", "ES2020"],
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "noEmit": true,
+    "baseUrl": "src",
+    "checkJs": false,
+    "resolveJsonModule": true,
+    "jsx": "react-jsx",
+    "types": ["./src/global.d.ts", "@types/chrome"]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.png",
+    "src/**/*.jpg",
+    "src/**/*.jpeg",
+    "src/**/*.gif",
+    "src/**/*.svg",
+    "src/**/*.json",
+    "src/global.d.ts"
+  ],
+  "exclude": ["node_modules", "**/*.spec.ts"]
+}
