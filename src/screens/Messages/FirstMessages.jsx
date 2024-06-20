@@ -6,11 +6,11 @@ import dayjs from 'dayjs';
 import {
     findFirstMessage,
     getFbUrlFromId,
-    getMessagesAfter,
+    getMessagesAfterMsgId,
     getUidFromUrl,
     getUserAvatarFromUid,
     getUserInfoFromUid,
-    isExistMessage,
+    getMessagesAtTimeCursor,
 } from '../../utils/facebook';
 
 // import mockMsgs from '../../mock/messages.json';
@@ -61,7 +61,7 @@ export default function FirstMessages() {
             const now = dayjs();
             setTime(now);
 
-            const msgs = await isExistMessage({
+            const msgs = await getMessagesAtTimeCursor({
                 friendUid,
                 before: now.valueOf(),
             });
@@ -89,7 +89,7 @@ export default function FirstMessages() {
 
             console.log('first message', data);
             if (data?.[0]) {
-                const msgs = await getMessagesAfter({
+                const msgs = await getMessagesAfterMsgId({
                     friendUid: friendProfile.uid,
                     msgId: data[0].message_id,
                 });
@@ -106,7 +106,7 @@ export default function FirstMessages() {
 
     const onSelectDate = async value => {
         let time = dayjs(value).valueOf();
-        const msg = await isExistMessage({
+        const msg = await getMessagesAtTimeCursor({
             friendUid: friendProfile.uid,
             before: time,
         });
@@ -117,7 +117,7 @@ export default function FirstMessages() {
     const fetchNext = async () => {
         try {
             setFetchingNext(true);
-            const msgs = await getMessagesAfter({
+            const msgs = await getMessagesAfterMsgId({
                 friendUid: friendProfile.uid,
                 msgId: messages?.[messages.length - 1]?.message_id,
                 direction: 'down',
@@ -134,7 +134,7 @@ export default function FirstMessages() {
     const fetchPrev = async () => {
         try {
             setFetchingPrev(true);
-            const msgs = await getMessagesAfter({
+            const msgs = await getMessagesAfterMsgId({
                 friendUid: friendProfile.uid,
                 msgId: messages?.[0]?.message_id,
                 direction: 'up',
