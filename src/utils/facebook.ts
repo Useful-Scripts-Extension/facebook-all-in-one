@@ -195,7 +195,6 @@ export async function getAllMessages(): Promise<Array<MessageObject>> {
                 isGroup: d.type === 'GROUP' || d.type === 'COMMUNITY_GROUP',
             };
         });
-    console.log(data);
 
     return data;
 }
@@ -306,5 +305,43 @@ export async function getMessagesAtTimeCursor({
 // #endregion
 
 // #region friends
+
+export async function getAllFriends({ myUid, targetUid }) {
+    const res = await fetchGraphQl({
+        doc_id: '4936483286421335',
+        av: myUid,
+        dpr: 1,
+        __a: 1,
+        __user: myUid,
+        variables: { id: targetUid || myUid, query: '', scale: 1 },
+    });
+    try {
+        return JSON.parse(res || '{}')?.data?.user?.friends?.edges || [];
+    } catch (e) {
+        return [];
+    }
+}
+
+export async function unfriend({ myUid, targetUid }) {
+    return fetchGraphQl({
+        doc_id: '2316924651742928',
+        av: myUid,
+        fb_api_caller_class: 'RelayModern',
+        fb_api_req_friendly_name: 'FriendingCometUnfriendMutation',
+        dpr: 1,
+        __a: 1,
+        __user: myUid,
+        server_timestamps: true,
+        variables: {
+            input: {
+                source: 'bd_profile_button',
+                unfriended_user_id: targetUid,
+                actor_id: myUid,
+                client_mutation_id: 1,
+            },
+            scale: 1,
+        },
+    });
+}
 
 // #endregion
