@@ -1,4 +1,4 @@
-import { createRoot } from 'react-dom/client';
+import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import { App, ConfigProvider, theme } from 'antd';
 import useStore, { selectors } from './store';
@@ -27,5 +27,5 @@ export function Container() {
   );
 }
 
-const root = createRoot(document.getElementById('root')!);
+const root = ReactDOM.createRoot(document.getElementById('root')!);
 root.render(<Container />);
