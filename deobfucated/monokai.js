@@ -20,7 +20,7 @@ class FacebookApiBase {
     }
 }
 
-class AccessToken extends FacebookApiBase {
+class FacebookApi extends FacebookApiBase {
     constructor(e) {
         super(e);
     }
@@ -106,7 +106,7 @@ class AccessToken extends FacebookApiBase {
     }
 }
 
-class GraphQL extends FacebookApiBase {
+class GraphQL extends FacebookApi {
     constructor(e) {
         super(e);
         this.graphApiBase = 'https://graph.facebook.com';
