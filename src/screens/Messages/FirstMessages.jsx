@@ -1,5 +1,16 @@
-import { useEffect, useState } from 'react';
-import { App, Avatar, Button, DatePicker, Image, Input, Space, Tooltip, Typography } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import {
+    App,
+    Avatar,
+    Button,
+    DatePicker,
+    Image,
+    Input,
+    List,
+    Space,
+    Tooltip,
+    Typography,
+} from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -19,6 +30,13 @@ import useStore, { selectors } from '../../store';
 const dateFormat = 'YYYY-MM-DD';
 const minDate = dayjs('2004-01-01', dateFormat);
 
+const MessagePosition = {
+    SINGLE: 'single',
+    START: 'start',
+    MIDDLE: 'middle',
+    END: 'end',
+};
+
 export default function FirstMessages() {
     const { message } = App.useApp();
     const location = useLocation();
@@ -33,6 +51,29 @@ export default function FirstMessages() {
     const [friendUrlOrUid, setFriendUrlOrUid] = useState(location.state?.friendUid);
     const [friendProfile, setFriendProfile] = useState(null);
     const [messages, setMessages] = useState([]);
+
+    // group nearest message that have same sender id
+    const messagesGrouped = useMemo(() => {
+        if (!messages?.length) return [];
+        const grouped = [];
+        for (let i = 0; i < messages.length; i++) {
+            let preId = messages[i - 1]?.message_sender?.id;
+            let curId = messages[i]?.message_sender?.id;
+            let nextId = messages[i + 1]?.message_sender?.id;
+
+            let type = MessagePosition.SINGLE;
+            if (curId == preId && curId == nextId) type = MessagePosition.MIDDLE;
+            else if (curId == preId) type = MessagePosition.END;
+            else if (curId == nextId) type = MessagePosition.START;
+
+            grouped.push({
+                ...messages[i],
+                _messagePosition: type,
+            });
+        }
+        console.log(grouped);
+        return grouped;
+    }, [messages]);
 
     useEffect(() => {
         if (friendUrlOrUid) init();
@@ -149,21 +190,24 @@ export default function FirstMessages() {
     };
 
     const renderMessages = () => {
-        if (!messages.length) return null;
+        if (!messagesGrouped.length) return null;
 
         return (
             <>
                 <Button type="primary" onClick={fetchPrev} loading={fetchingPrev}>
                     {t('Fetch previous')}
                 </Button>
-                {messages.map(msg => (
-                    <MessageItem
-                        message={msg}
-                        myProfile={myProfile}
-                        friendProfile={friendProfile}
-                        key={msg.message_id}
-                    />
-                ))}
+                <List
+                    split={false}
+                    dataSource={messagesGrouped}
+                    renderItem={msg => (
+                        <MessageItem
+                            message={msg}
+                            myProfile={myProfile}
+                            friendProfile={friendProfile}
+                        />
+                    )}
+                />
                 <Button type="primary" onClick={fetchNext} loading={fetchingNext}>
                     {t('Fetch next')}
                 </Button>
@@ -231,8 +275,8 @@ function getMessageInfo(msg, myProfile) {
         text:
             msg?.message?.text ||
             msg?.extensible_attachment?.story_attachment?.url ||
-            msg?.extensible_attachment?.story_attachment?.description?.text ||
-            msg?.snippet,
+            msg?.extensible_attachment?.story_attachment?.description?.text,
+        snippet: msg?.snippet,
         attachment: msg?.blob_attachments
             ?.map(_ => {
                 if (_.__typename === 'MessageVideo')
@@ -252,6 +296,12 @@ function getMessageInfo(msg, myProfile) {
                         uri: _.url,
                         filename: _.filename,
                     };
+                if (_.__typename === 'MessageAnimatedImage')
+                    return {
+                        type: 'gif',
+                        uri: _?.animated_image?.uri || _?.preview_image?.uri,
+                        filename: _.filename,
+                    };
                 return null;
             })
             .filter(Boolean),
@@ -261,13 +311,75 @@ function getMessageInfo(msg, myProfile) {
     };
 }
 
+function getBorderRadius(msgPos, isMy) {
+    let b = 8;
+    if (isMy) {
+        if (msgPos === MessagePosition.START)
+            return {
+                borderBottomRightRadius: b,
+            };
+        if (msgPos === MessagePosition.MIDDLE)
+            return {
+                borderBottomRightRadius: b,
+                borderTopRightRadius: b,
+            };
+        if (msgPos === MessagePosition.END)
+            return {
+                borderTopRightRadius: b,
+            };
+    } else {
+        if (msgPos === MessagePosition.START)
+            return {
+                borderBottomLeftRadius: b,
+            };
+        if (msgPos === MessagePosition.MIDDLE)
+            return {
+                borderBottomLeftRadius: b,
+                borderTopLeftRadius: b,
+            };
+        if (msgPos === MessagePosition.END)
+            return {
+                borderTopLeftRadius: b,
+            };
+    }
+    return {};
+}
+
 function MessageItem({ message, myProfile, friendProfile }) {
+    const darkMode = useStore(selectors.darkMode);
     const info = getMessageInfo(message, myProfile);
 
+    const _dt = message._messagePosition;
+    const _my = info.isMyMessage;
+
+    const textStyle = {
+        display: 'block',
+        wordBreak: 'break-word',
+        padding: '8px 12px',
+        backgroundColor: _my ? '#0184ff' : darkMode ? '#303030' : '#f0f0f0',
+        color: darkMode || _my ? '#eee' : '#111',
+        whiteSpace: 'pre-line',
+        margin: 0,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        ...getBorderRadius(_dt, _my),
+    };
+
     return (
-        <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-            {info.isMyMessage && <div style={{ flex: 1 }}></div>}
-            {!info.isMyMessage && (
+        <div
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                width: '100%',
+                marginBottom:
+                    _dt === MessagePosition.END || _dt === MessagePosition.SINGLE ? 12 : 2,
+            }}
+        >
+            {_my ? (
+                <div style={{ flex: 1 }}></div>
+            ) : _dt === MessagePosition.END || _dt === MessagePosition.SINGLE ? (
                 <a href={getFbUrlFromId(info.sender.id)} target="_blank">
                     <Avatar
                         shape="circle"
@@ -276,26 +388,16 @@ function MessageItem({ message, myProfile, friendProfile }) {
                         style={{ marginRight: 8 }}
                     />
                 </a>
+            ) : (
+                <div style={{ width: 48 }}></div>
             )}
             <Tooltip
                 title={dayjs(info.time).format('YYYY-MM-DD HH:mm')}
-                placement={info.isMyMessage ? 'left' : 'right'}
+                placement={_my ? 'left' : 'right'}
                 style={{ width: '100%' }}
             >
                 {info.text && (
-                    <Typography.Paragraph
-                        style={{
-                            display: 'block',
-                            wordBreak: 'break-word',
-                            padding: '8px 12px',
-                            borderRadius: 24,
-                            backgroundColor: info.isMyMessage ? '#0084ff' : '#303030',
-                            whiteSpace: 'pre-line',
-                            margin: 0,
-                        }}
-                    >
-                        {info.text}
-                    </Typography.Paragraph>
+                    <Typography.Paragraph style={textStyle}>{info.text}</Typography.Paragraph>
                 )}
                 {info.sticker && <Image width={150} src={info.sticker} />}
                 {info.attachment?.map((attachment, index) => {
@@ -308,7 +410,7 @@ function MessageItem({ message, myProfile, friendProfile }) {
                                 style={{ maxHeight: 300, maxWidth: 300 }}
                             />
                         );
-                    if (attachment.type === 'image')
+                    if (attachment.type === 'image' || attachment.type === 'gif')
                         return (
                             <Image
                                 key={'attachment' + index}
@@ -323,14 +425,7 @@ function MessageItem({ message, myProfile, friendProfile }) {
                                 href={attachment.uri}
                                 target="_blank"
                                 rel="noreferrer"
-                                style={{
-                                    display: 'block',
-                                    wordBreak: 'break-word',
-                                    padding: '8px 12px',
-                                    borderRadius: 24,
-                                    backgroundColor: info.isMyMessage ? '#0084ff' : '#303030',
-                                    color: 'white',
-                                }}
+                                style={textStyle}
                             >
                                 File: {attachment.filename}
                             </a>
