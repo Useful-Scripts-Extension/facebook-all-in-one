@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
     App,
     Avatar,
@@ -13,6 +13,7 @@ import {
 } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
+import { produce } from 'immer';
 import dayjs from 'dayjs';
 import {
     findFirstMessage,
@@ -23,8 +24,6 @@ import {
     getUserInfoFromUid,
     getMessagesAtTimeCursor,
 } from '../../utils/facebook';
-
-// import mockMsgs from '../../mock/messages.json';
 import useStore, { selectors } from '../../store';
 
 const dateFormat = 'YYYY-MM-DD';
@@ -37,18 +36,28 @@ const MessagePosition = {
     END: 'end',
 };
 
+const CACHED = {
+    friend: {},
+};
+
 export default function FirstMessages() {
     const { message } = App.useApp();
     const location = useLocation();
     const { t } = useTranslation();
 
+    const friendUidParam = location.state?.friendUid;
+
     const myProfile = useStore(selectors.profile);
-    const [loading, setLoading] = useState(false);
-    const [fetchingNext, setFetchingNext] = useState(false);
-    const [fetchingPrev, setFetchingPrev] = useState(false);
+    const [fetchingFirstMsg, setFetchingFirstMsg] = useState(false);
+    const [pagingState, setPagingState] = useState({
+        fetchingNext: false,
+        fetchingPrev: false,
+        hasNext: true,
+        hasPrev: true,
+    });
 
     const [time, setTime] = useState(null);
-    const [friendUrlOrUid, setFriendUrlOrUid] = useState(location.state?.friendUid);
+    const [friendUrlOrUid, setFriendUrlOrUid] = useState(friendUidParam);
     const [friendProfile, setFriendProfile] = useState(null);
     const [messages, setMessages] = useState([]);
 
@@ -71,16 +80,32 @@ export default function FirstMessages() {
                 _messagePosition: type,
             });
         }
-        console.log(grouped);
         return grouped;
     }, [messages]);
 
-    useEffect(() => {
-        if (friendUrlOrUid) init();
-    }, [friendUrlOrUid]);
+    // remember scroll position
+    const listRef = useRef(null);
+    const scrollHeightRef = useRef(0);
+    const _setMessages = msgs => {
+        scrollHeightRef.current = listRef.current?.scrollHeight || 0;
+        setMessages(msgs);
+    };
+    useLayoutEffect(() => {
+        let newScollHeight = listRef.current?.scrollHeight || 0;
+        if (newScollHeight > scrollHeightRef.current)
+            listRef.current?.scrollTo({ top: newScollHeight - scrollHeightRef.current });
+    }, [messages]);
 
-    const init = async () => {
+    // fetch functions
+    const getRecentMessage = async () => {
         try {
+            setPagingState(
+                produce(state => {
+                    state.hasNext = false;
+                    state.hasPrev = false;
+                })
+            );
+
             let friendUid;
             if (/\d+$/.test(friendUrlOrUid)) {
                 friendUid = friendUrlOrUid;
@@ -91,10 +116,13 @@ export default function FirstMessages() {
             }
             if (!friendUid) throw new Error('Invalid friend url');
 
-            message.loading(t('Fetching friend info...'));
-            const friendInfo = await getUserInfoFromUid(friendUid);
-            message.destroy();
-            if (!friendInfo) throw new Error('Failed to fetch friend info');
+            let friendInfo = CACHED.friend[friendUid];
+            if (!friendInfo) {
+                message.loading(t('Fetching friend info...'));
+                friendInfo = await getUserInfoFromUid(friendUid);
+                message.destroy();
+                if (!friendInfo) throw new Error('Failed to fetch friend info');
+            }
             setFriendProfile(friendInfo);
 
             // fetch recent messages
@@ -107,17 +135,30 @@ export default function FirstMessages() {
                 before: now.valueOf(),
             });
             console.log(msgs);
-            setMessages(msgs);
+            _setMessages(msgs);
             message.destroy();
             message.success(t('Fetch completed'));
+
+            setPagingState(
+                produce(state => {
+                    state.hasNext = msgs.length > 1;
+                    state.hasPrev = true;
+                    state.fetchingNext = false;
+                    state.fetchingPrev = false;
+                })
+            );
         } catch (e) {
             message.error(t('Failed to fetch') + ': ' + e.message);
         }
     };
 
+    useEffect(() => {
+        if (friendUidParam) getRecentMessage();
+    }, [friendUidParam]);
+
     const getFirstMessage = async () => {
         try {
-            setLoading(true);
+            setFetchingFirstMsg(true);
 
             const data = await findFirstMessage({
                 friendUid: friendProfile.uid,
@@ -135,13 +176,19 @@ export default function FirstMessages() {
                     msgId: data[0].message_id,
                 });
                 console.log(msgs);
-                setMessages(msgs);
+                _setMessages(msgs);
+                setPagingState(
+                    produce(state => {
+                        state.hasNext = msgs.length > 1;
+                        state.hasPrev = true;
+                    })
+                );
             }
         } catch (err) {
             message.error(t('Failed to fetch') + ': ' + err.message);
             console.log(err);
         } finally {
-            setLoading(false);
+            setFetchingFirstMsg(false);
         }
     };
 
@@ -152,79 +199,93 @@ export default function FirstMessages() {
             before: time,
         });
         console.log(msg);
-        setMessages(msg);
+        _setMessages(msg);
     };
 
     const fetchNext = async () => {
         try {
-            setFetchingNext(true);
+            setPagingState(
+                produce(state => {
+                    state.fetchingNext = true;
+                })
+            );
             const msgs = await getMessagesAfterMsgId({
                 friendUid: friendProfile.uid,
                 msgId: messages?.[messages.length - 1]?.message_id,
                 direction: 'down',
             });
-            msgs.shift();
-            setMessages([...messages, ...msgs]);
+            console.log(msgs);
+            if (msgs.length > 1) {
+                msgs.shift();
+                _setMessages([...messages, ...msgs]);
+            }
+            setPagingState(
+                produce(pagingState => {
+                    pagingState.hasNext = msgs.length > 1;
+                })
+            );
         } catch (e) {
             message.error(t('Failed to fetch') + ': ' + e.message);
         } finally {
-            setFetchingNext(false);
+            setPagingState(
+                produce(pagingState => {
+                    pagingState.fetchingNext = false;
+                })
+            );
         }
     };
 
     const fetchPrev = async () => {
         try {
-            setFetchingPrev(true);
+            setPagingState(
+                produce(state => {
+                    state.fetchingPrev = true;
+                })
+            );
             const msgs = await getMessagesAfterMsgId({
                 friendUid: friendProfile.uid,
                 msgId: messages?.[0]?.message_id,
                 direction: 'up',
             });
-            msgs.pop();
-            setMessages([...msgs, ...messages]);
+            if (msgs.length > 1) {
+                msgs.pop();
+                _setMessages([...msgs, ...messages]);
+            }
+            setPagingState(
+                produce(state => {
+                    state.hasPrev = msgs.length > 1;
+                })
+            );
         } catch (e) {
             message.error(t('Failed to fetch') + ': ' + e.message);
         } finally {
-            setFetchingPrev(false);
+            setPagingState(
+                produce(state => {
+                    state.fetchingPrev = false;
+                })
+            );
         }
-    };
-
-    const renderMessages = () => {
-        if (!messagesGrouped.length) return null;
-
-        return (
-            <>
-                <Button type="primary" onClick={fetchPrev} loading={fetchingPrev}>
-                    {t('Fetch previous')}
-                </Button>
-                <List
-                    split={false}
-                    dataSource={messagesGrouped}
-                    renderItem={msg => (
-                        <MessageItem
-                            message={msg}
-                            myProfile={myProfile}
-                            friendProfile={friendProfile}
-                        />
-                    )}
-                />
-                <Button type="primary" onClick={fetchNext} loading={fetchingNext}>
-                    {t('Fetch next')}
-                </Button>
-            </>
-        );
     };
 
     return (
         <Space direction="vertical" style={{ width: '100%' }}>
             <Space direction="horizontal">
-                <Space>
+                <Space.Compact>
                     <Input
                         value={friendUrlOrUid}
                         placeholder="Enter friend url/uid"
                         onChange={e => setFriendUrlOrUid(e.target.value)}
                     />
-                </Space>
+                    <Tooltip title={t('Scan messages')} placement="bottom" mouseEnterDelay={0.5}>
+                        <Button
+                            type="primary"
+                            onClick={getRecentMessage}
+                            loading={fetchingFirstMsg}
+                        >
+                            <i className="fas fa-search" />
+                        </Button>
+                    </Tooltip>
+                </Space.Compact>
 
                 <Space.Compact>
                     <DatePicker
@@ -240,28 +301,71 @@ export default function FirstMessages() {
                         onOk={onSelectDate}
                         disabled={!friendProfile}
                     />
-                    <Button
-                        type="primary"
-                        onClick={getFirstMessage}
-                        loading={loading}
-                        disabled={!friendProfile}
+                    <Tooltip
+                        title={t('Find first message')}
+                        placement="bottom"
+                        mouseEnterDelay={0.5}
                     >
-                        {t('Find first message')}
-                    </Button>
+                        <Button
+                            type="primary"
+                            onClick={getFirstMessage}
+                            loading={fetchingFirstMsg}
+                            disabled={!friendProfile}
+                        >
+                            <i className="fa-solid fa-clock-rotate-left"></i>
+                        </Button>
+                    </Tooltip>
                 </Space.Compact>
             </Space>
             <Space
+                ref={listRef}
                 direction="vertical"
                 size={3}
                 style={{
                     width: '100%',
                     maxHeight: '70vh',
-                    maxWidth: 1000,
+                    // maxWidth: 1000,
                     overflow: 'auto',
                     padding: 12,
                 }}
             >
-                {renderMessages()}
+                <List
+                    header={
+                        <Space style={{ display: 'flex', justifyContent: 'center' }}>
+                            <Button
+                                type="primary"
+                                onClick={fetchPrev}
+                                loading={pagingState.fetchingPrev}
+                                disabled={!pagingState.hasPrev}
+                            >
+                                {!pagingState.fetchingPrev && <i className="fas fa-arrow-up" />}
+                                {pagingState.hasPrev ? t('Fetch previous') : t('No more message')}
+                            </Button>
+                        </Space>
+                    }
+                    split={false}
+                    dataSource={messagesGrouped}
+                    renderItem={msg => (
+                        <MessageItem
+                            message={msg}
+                            myProfile={myProfile}
+                            friendProfile={friendProfile}
+                        />
+                    )}
+                    footer={
+                        <Space style={{ display: 'flex', justifyContent: 'center' }}>
+                            <Button
+                                type="primary"
+                                onClick={fetchNext}
+                                loading={pagingState.fetchingNext}
+                                disabled={!pagingState.hasNext}
+                            >
+                                {!pagingState.fetchingNext && <i className="fas fa-arrow-down" />}
+                                {pagingState.hasNext ? t('Fetch next') : t('No more message')}
+                            </Button>
+                        </Space>
+                    }
+                />
             </Space>
         </Space>
     );
@@ -269,6 +373,7 @@ export default function FirstMessages() {
 
 function getMessageInfo(msg, myProfile) {
     return {
+        // "GenericAdminTextMessage"
         message_id: msg?.message_id,
         sender: msg?.message_sender,
         time: Number(msg?.timestamp_precise),
@@ -312,7 +417,7 @@ function getMessageInfo(msg, myProfile) {
 }
 
 function getBorderRadius(msgPos, isMy) {
-    let b = 8;
+    let b = 4;
     if (isMy) {
         if (msgPos === MessagePosition.START)
             return {
@@ -360,6 +465,7 @@ function MessageItem({ message, myProfile, friendProfile }) {
         color: darkMode || _my ? '#eee' : '#111',
         whiteSpace: 'pre-line',
         margin: 0,
+        maxWidth: 400,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         borderBottomLeftRadius: 24,
@@ -367,19 +473,21 @@ function MessageItem({ message, myProfile, friendProfile }) {
         ...getBorderRadius(_dt, _my),
     };
 
+    const showAvatar = _dt === MessagePosition.END || _dt === MessagePosition.SINGLE;
+    const spacer = <div style={{ flex: 1 }}></div>;
+
     return (
         <div
             style={{
                 display: 'flex',
                 alignItems: 'center',
                 width: '100%',
-                marginBottom:
-                    _dt === MessagePosition.END || _dt === MessagePosition.SINGLE ? 12 : 2,
+                marginBottom: showAvatar ? 12 : 2,
             }}
         >
             {_my ? (
-                <div style={{ flex: 1 }}></div>
-            ) : _dt === MessagePosition.END || _dt === MessagePosition.SINGLE ? (
+                spacer
+            ) : showAvatar ? (
                 <a href={getFbUrlFromId(info.sender.id)} target="_blank">
                     <Avatar
                         shape="circle"
@@ -394,8 +502,10 @@ function MessageItem({ message, myProfile, friendProfile }) {
             <Tooltip
                 title={dayjs(info.time).format('YYYY-MM-DD HH:mm')}
                 placement={_my ? 'left' : 'right'}
-                style={{ width: '100%' }}
             >
+                {!info.text && !info.sticker && !info.attachment?.length && info.snippet && (
+                    <Typography.Paragraph style={textStyle}>{info.snippet}</Typography.Paragraph>
+                )}
                 {info.text && (
                     <Typography.Paragraph style={textStyle}>{info.text}</Typography.Paragraph>
                 )}
@@ -433,6 +543,7 @@ function MessageItem({ message, myProfile, friendProfile }) {
                     return null;
                 })}
             </Tooltip>
+            {!_my && spacer}
         </div>
     );
 }
