@@ -10,11 +10,8 @@ export default function MyTable({
   selectable = false,
   searchable = false,
   loading = false,
-  loadingOnReloadButton = false,
-  onClickReload,
-  onClickExport,
-  onClickDelete,
   keyExtractor = (item) => item.key,
+  renderTitle,
   style
 }: Readonly<{
   data: any[],
@@ -24,10 +21,7 @@ export default function MyTable({
   selectable?: boolean,
   searchable?: boolean,
   loading?: boolean,
-  loadingOnReloadButton?: boolean,
-  onClickReload?: () => void,
-  onClickExport?: (data: any[], type: string) => void,
-  onClickDelete?: (data: any[]) => void,
+  renderTitle?: (dataSelected: any[]) => React.ReactNode,
   keyExtractor?: (item: any) => string,
   style?: React.CSSProperties
 }>) {
@@ -51,6 +45,13 @@ export default function MyTable({
         })),
     [data, search]
   );
+
+  useEffect(() => {
+    if (!dataSelected?.length) return
+    let allKeys = new Set(data.map(keyExtractor))
+    let newDataSelected = dataSelected.filter((_) => allKeys.has(keyExtractor(_)))
+    setDataSelected(newDataSelected)
+  }, [data])
 
   const currentDataSource = useRef(dataSearched);
   useEffect(() => {
@@ -98,59 +99,11 @@ export default function MyTable({
     ],
   };
 
-  const renderTitle = () => (
+  const _renderTitle = () => (
     <Row justify="space-between" style={{ margin: "5px" }}>
       <Row align="middle">
         <Space wrap>
-          {typeof onClickReload === "function" && (
-            <Button
-              type="primary"
-              icon={loadingOnReloadButton
-                ? <i className="fa-solid fa-rotate-right fa-spin"></i>
-                : <i className="fa-solid fa-rotate-right"></i>}
-              onClick={onClickReload}
-            >
-              {t("Reload")}
-            </Button>
-          )}
-
-          {typeof onClickExport === "function" && (
-            <Dropdown
-              menu={{
-                items: [
-                  { key: "json", label: ".json" },
-                  { key: "csv", label: ".csv" },
-                ],
-                onClick: (e) => onClickExport(dataSelected, e.key),
-              }}
-            >
-              <Button type="primary" icon={<i className="fa-solid fa-download"></i>}>
-                {dataSelected?.length ? t("Export selected") : t("Export")}
-              </Button>
-            </Dropdown>
-          )}
-
-          {typeof onClickDelete === "function" && (
-            <Button
-              danger
-              type="primary"
-              icon={<i className="fa-solid fa-trash-can"></i>}
-              onClick={() => onClickDelete(dataSelected)}
-            >
-              {t("Delete")}
-            </Button>
-          )}
-
-          {dataSelected.length ? (
-            <Tag
-              closable
-              onClose={() => setDataSelected([])}
-              color="processing"
-              style={{ marginLeft: "10px", fontWeight: "bold" }}
-            >
-              {t("Selected {{count}} messages", { count: dataSelected.length })}
-            </Tag>
-          ) : null}
+          {typeof renderTitle === "function" && renderTitle(dataSelected)}
         </Space>
       </Row>
 
@@ -158,7 +111,7 @@ export default function MyTable({
         <Input.Search
           placeholder={t("Search")}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ marginVertical: 16, maxWidth: 300 }}
+          style={{ marginRight: 16, marginLeft: 16, maxWidth: 300 }}
         />
       )}
     </Row>
@@ -181,7 +134,7 @@ export default function MyTable({
       }}
       rowSelection={selectable ? rowSelection : false}
       expandable={expandable}
-      title={renderTitle}
+      title={_renderTitle}
       pagination={{
         position: ["bottomCenter"],
         showSizeChanger: true,

@@ -321,8 +321,8 @@ export async function getAllFriends({ myUid, targetUid }) {
         return json.map(item => ({
             uid: item.node.id,
             name: item.node.name,
-            // avatar: item.node.photo?.uri,
-            avatar: getUserAvatarFromUid(item.node.id),
+            avatar: item.node.photo?.uri,
+            avatarLarge: getUserAvatarFromUid(item.node.id),
         }));
     } catch (e) {
         return [];
@@ -330,25 +330,22 @@ export async function getAllFriends({ myUid, targetUid }) {
 }
 
 export async function unfriend({ myUid, targetUid }) {
-    return fetchGraphQl({
-        doc_id: '2316924651742928',
-        av: myUid,
-        fb_api_caller_class: 'RelayModern',
-        fb_api_req_friendly_name: 'FriendingCometUnfriendMutation',
-        dpr: 1,
-        __a: 1,
-        __user: myUid,
-        server_timestamps: true,
+    const res = await fetchGraphQl({
+        doc_id: '8752443744796374',
         variables: {
             input: {
-                source: 'bd_profile_button',
+                source: 'friending_jewel',
                 unfriended_user_id: targetUid,
                 actor_id: myUid,
-                client_mutation_id: 1,
+                client_mutation_id: '8',
             },
             scale: 1,
         },
     });
+
+    const json = JSON.parse(res || '{}');
+    if (json.errors?.length) throw new Error(json.errors[0].message);
+    return json;
 }
 
 // #endregion

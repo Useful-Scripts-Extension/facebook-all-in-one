@@ -1,10 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
-import { App, Avatar, Button, Image, Row, Tag, Tooltip, Typography } from 'antd';
+import {
+    App,
+    Avatar,
+    Button,
+    Dropdown,
+    Image,
+    Popconfirm,
+    Row,
+    Tag,
+    Tooltip,
+    Typography,
+} from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import useStore, { selectors } from '../../store';
-import { getAllFriends, getFbUrlFromId } from '../../utils/facebook';
+import { getAllFriends, getFbUrlFromId, unfriend } from '../../utils/facebook';
 import MyTable from '../../components/MyTable';
+import fileDownload from 'js-file-download';
+import { objectToCsv } from '../../utils/helper';
 
 const { Title } = Typography;
 
@@ -28,9 +41,7 @@ export default function AllFriends() {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        if (profile?.uid && !friends?.length) {
-            onClickReload();
-        }
+        if (profile?.uid && !friends?.length) onClickReload();
     }, []);
 
     const onClickReload = () => {
@@ -53,9 +64,33 @@ export default function AllFriends() {
             });
     };
 
-    const onClickExport = (selectedData, type) => {};
+    const onClickExport = (selectedData, type) => {
+        let dataToSave = selectedData?.length ? selectedData : friends;
+        if (!dataToSave?.length) return message.error(t('No data to export'));
+        if (type == 'json') fileDownload(JSON.stringify(dataToSave), 'friends.json');
+        else if (type == 'csv') fileDownload(objectToCsv(dataToSave), 'friends.csv');
+        else message.error(t('Unsupported file type'));
+    };
 
-    const onClickDelete = selectedData => {};
+    const onClickUnfriendSelected = async selectedData => {
+        for (let record of selectedData) {
+            await onClickUnfriendOne(record);
+        }
+    };
+
+    const onClickUnfriendOne = async record => {
+        try {
+            message.loading(t('Unfriending...') + ' ' + record.name);
+            await unfriend({ myUid: profile?.uid, targetUid: record.uid });
+            message.destroy();
+            message.success(t('Unfriend completed') + ': ' + record.name);
+
+            setFriends(friends.filter(f => f.uid !== record.uid));
+        } catch (err) {
+            message.error(t('Failed to unfriend') + ': ' + record.name + ': ' + err.message);
+            console.log(err);
+        }
+    };
 
     const columns = [
         {
@@ -76,7 +111,11 @@ export default function AllFriends() {
             render: (text, record, index) => {
                 return (
                     <Row align="middle">
-                        <Avatar shape="square" src={<Image src={record.avatar} />} size={50} />
+                        <Avatar
+                            shape="square"
+                            src={<Image src={record.avatarLarge} fallback={record.avatar} />}
+                            size={50}
+                        />
                         <a href={record.url} target="_blank" style={{ marginLeft: '10px' }}>
                             <b>{record.name}</b>
                         </a>
@@ -99,11 +138,19 @@ export default function AllFriends() {
             render: (text, record, index) => (
                 <>
                     <Tooltip title={t('Unfriend')}>
-                        <Button
-                            type="primary"
-                            danger
-                            icon={<i className="fa-solid fa-trash"></i>}
-                        ></Button>
+                        <Popconfirm
+                            title={t('Unfriend user')}
+                            description={t('Are you sure to unfriend this user?')}
+                            onConfirm={() => onClickUnfriendOne(record)}
+                            okText={t('Yes')}
+                            cancelText={t('No')}
+                        >
+                            <Button
+                                danger
+                                type="primary"
+                                icon={<i className="fa-solid fa-trash"></i>}
+                            ></Button>
+                        </Popconfirm>
                     </Tooltip>
                 </>
             ),
@@ -111,6 +158,66 @@ export default function AllFriends() {
             align: 'right',
         },
     ];
+
+    const renderTitle = dataSelected => {
+        return (
+            <>
+                <Button
+                    type="primary"
+                    icon={
+                        loading ? (
+                            <i className="fa-solid fa-rotate-right fa-spin"></i>
+                        ) : (
+                            <i className="fa-solid fa-rotate-right"></i>
+                        )
+                    }
+                    onClick={onClickReload}
+                >
+                    {t('Reload')}
+                </Button>
+
+                <Dropdown
+                    menu={{
+                        items: [
+                            { key: 'json', label: '.json' },
+                            { key: 'csv', label: '.csv' },
+                        ],
+                        onClick: e => onClickExport(dataSelected, e.key),
+                    }}
+                >
+                    <Button type="primary" icon={<i className="fa-solid fa-download"></i>}>
+                        {dataSelected?.length
+                            ? t('Export {{count}}', { count: dataSelected.length })
+                            : t('Export')}
+                    </Button>
+                </Dropdown>
+
+                {dataSelected?.length ? (
+                    <Popconfirm
+                        title={t('Unfriend {{count}} friends', { count: dataSelected.length })}
+                        description={t('Are you sure to unfriend these friends?')}
+                        onConfirm={() => onClickUnfriendSelected(dataSelected)}
+                        okText={t('Yes')}
+                        cancelText={t('No')}
+                    >
+                        <Button
+                            danger
+                            type="primary"
+                            icon={<i className="fa-solid fa-trash-can"></i>}
+                        >
+                            {t('Unfriend {{count}}', { count: dataSelected.length })}
+                        </Button>
+                    </Popconfirm>
+                ) : null}
+
+                {dataSelected.length ? (
+                    <Tag color="processing" style={{ marginLeft: '10px', fontWeight: 'bold' }}>
+                        {t('Selected {{count}} friends', { count: dataSelected.length })}
+                    </Tag>
+                ) : null}
+            </>
+        );
+    };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
@@ -128,12 +235,9 @@ export default function AllFriends() {
                 size="small"
                 searchable
                 selectable
-                loadingOnReloadButton={loading}
-                onClickReload={onClickReload}
-                onClickExport={onClickExport}
-                onClickDelete={onClickDelete}
                 keyExtractor={_ => _.uid}
                 style={{ flex: 1, maxHeight: '100%' }}
+                renderTitle={renderTitle}
             />
         </div>
     );

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { App, Avatar, Button, Dropdown, Row, Space, Tag, Tooltip, Typography } from 'antd';
+import { App, Avatar, Button, Dropdown, Image, Row, Space, Tag, Tooltip, Typography } from 'antd';
 import { MessageTwoTone } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import fileDownload from 'js-file-download';
 import { useNavigate } from 'react-router-dom';
 import useStore, { selectors } from '../../store';
 import MyTable from '../../components/MyTable';
-import { getAllMessages, getFbUrlFromId } from '../../utils/facebook';
+import { getAllMessages, getFbUrlFromId, getUserAvatarFromUid } from '../../utils/facebook';
 import { numberWithCommas, objectToCsv } from '../../utils/helper';
 
 const { Title } = Typography;
@@ -145,7 +145,15 @@ export default function AllMessages() {
                         ) : (
                             <Avatar
                                 shape="square"
-                                src={record.image || record.participants[0].avatar}
+                                src={
+                                    <Image
+                                        src={
+                                            record.image ||
+                                            getUserAvatarFromUid(record.participants?.[0]?.id)
+                                        }
+                                        fallback={record.participants?.[0]?.avatar}
+                                    />
+                                }
                             />
                         )}
                         <a href={record.url} target="_blank" style={{ marginLeft: '10px' }}>
@@ -248,6 +256,59 @@ export default function AllMessages() {
         },
     ];
 
+    const renderTitle = dataSelected => {
+        return (
+            <>
+                <Button
+                    type="primary"
+                    icon={
+                        loading ? (
+                            <i className="fa-solid fa-rotate-right fa-spin"></i>
+                        ) : (
+                            <i className="fa-solid fa-rotate-right"></i>
+                        )
+                    }
+                    onClick={onClickReload}
+                >
+                    {t('Reload')}
+                </Button>
+
+                <Dropdown
+                    menu={{
+                        items: [
+                            { key: 'json', label: '.json' },
+                            { key: 'csv', label: '.csv' },
+                        ],
+                        onClick: e => onClickExport(dataSelected, e.key),
+                    }}
+                >
+                    <Button type="primary" icon={<i className="fa-solid fa-download"></i>}>
+                        {dataSelected?.length
+                            ? t('Export {{count}}', { count: dataSelected.length })
+                            : t('Export')}
+                    </Button>
+                </Dropdown>
+
+                {dataSelected?.length ? (
+                    <Button
+                        danger
+                        type="primary"
+                        icon={<i className="fa-solid fa-trash-can"></i>}
+                        onClick={() => onClickDelete(dataSelected)}
+                    >
+                        {t('Delete {{count}}', { count: dataSelected.length })}
+                    </Button>
+                ) : null}
+
+                {dataSelected.length ? (
+                    <Tag color="processing" style={{ marginLeft: '10px', fontWeight: 'bold' }}>
+                        {t('Selected {{count}} messages', { count: dataSelected.length })}
+                    </Tag>
+                ) : null}
+            </>
+        );
+    };
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
             <Row align="middle" style={{ margin: '16px' }}>
@@ -265,12 +326,9 @@ export default function AllMessages() {
                 size="small"
                 searchable
                 selectable
-                loadingOnReloadButton={loading}
-                onClickReload={onClickReload}
-                onClickExport={onClickExport}
-                onClickDelete={onClickDelete}
                 keyExtractor={_ => _.id}
                 style={{ flex: 1, maxHeight: '100%' }}
+                renderTitle={renderTitle}
             />
         </div>
     );
