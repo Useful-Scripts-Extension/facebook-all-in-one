@@ -8,6 +8,7 @@ const store = (set, get) => ({
         profile: null,
     },
     messages: [],
+    friends: [],
     setDarkMode: darkMode =>
         set(state => {
             state.persist.darkMode = darkMode;
@@ -20,16 +21,23 @@ const store = (set, get) => ({
         set(state => {
             state.messages = messages;
         }),
+    setFriends: friends =>
+        set(state => {
+            state.friends = friends;
+        }),
 });
 
 export const selectors = {
+    hydrated: state => state.hydrated,
     darkMode: state => state.persist.darkMode,
     profile: state => state.persist.profile,
     messages: state => state.messages,
+    friends: state => state.friends,
+
     setDarkMode: state => state.setDarkMode,
     setProfile: state => state.setProfile,
     setMessages: state => state.setMessages,
-    hydrated: state => state.hydrated,
+    setFriends: state => state.setFriends,
 };
 
 const useStore = create(

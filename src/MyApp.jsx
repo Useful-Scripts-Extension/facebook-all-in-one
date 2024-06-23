@@ -1,15 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { App, Layout, Menu, Space } from 'antd';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LanguagePicker, LoadingFullScreen, ProfileHeader, ThemeSwitcher } from './components';
-import logo from './assets/logo.png';
-
 import useStore, { selectors } from './store';
-import { AllMessages, FirstMessages } from './screens/Messages';
+import logo from './assets/logo.png';
 import { connectExtension } from './utils/extesion';
 import { getUserInfoFromUid } from './utils/facebook';
-import Friends from './screens/Friends';
+import { AllMessages, FirstMessages } from './screens/Messages';
+import { AllFriends } from './screens/Friends';
 
 const { Header, Sider, Content, Footer } = Layout;
 
@@ -50,8 +49,6 @@ export default function MyApp() {
     const location = useLocation();
     const hydrated = useStore(selectors.hydrated);
 
-    const [collapsed, setCollapsed] = useState(false);
-
     const profile = useStore(selectors.profile);
     const setProfile = useStore(selectors.setProfile);
 
@@ -78,19 +75,17 @@ export default function MyApp() {
         },
         {
             label: t('Messages'),
-            icon: <i className="fa-brands fa-facebook-messenger"></i>,
-            // path: "/messages",
-            // element: <Messages />,
+            icon: <i className="fa-brands fa-facebook-messenger fa-lg"></i>,
             children: [
                 {
                     label: t('All messages'),
-                    icon: <i className="fa-solid fa-comments"></i>,
+                    icon: <i className="fa-solid fa-comments fa-lg"></i>,
                     path: '/messages/all',
                     element: <AllMessages />,
                 },
                 {
                     label: t('First messages'),
-                    icon: <i className="fa-solid fa-clock-rotate-left"></i>,
+                    icon: <i className="fa-solid fa-clock-rotate-left fa-lg"></i>,
                     path: '/messages/first',
                     element: <FirstMessages />,
                 },
@@ -98,19 +93,37 @@ export default function MyApp() {
         },
         {
             label: t('Friends'),
-            icon: <i className="fa-solid fa-user-group"></i>,
-            path: '/friends',
-            element: <Friends />,
+            icon: <i className="fa-solid fa-user-group fa-lg"></i>,
+            children: [
+                {
+                    label: t('All friends'),
+                    icon: <i className="fa-solid fa-users fa-lg"></i>,
+                    path: '/friends/all',
+                    element: <AllFriends />,
+                },
+                {
+                    label: t('Friend requests'),
+                    icon: <i className="fa-solid fa-user-plus fa-lg"></i>,
+                    path: '/friends/requests',
+                    element: <PlaceHolder name="Friend requests" />,
+                },
+                {
+                    label: t('Follow'),
+                    icon: <i className="fa-solid fa-person-walking-arrow-right fa-lg"></i>,
+                    path: '/friends/follow',
+                    element: <PlaceHolder name="Followings / Followers" />,
+                },
+            ],
         },
         {
             label: t('Groups'),
-            icon: <i className="fa-solid fa-users-line"></i>,
+            icon: <i className="fa-solid fa-users-line fa-lg"></i>,
             path: '/groups',
             element: <PlaceHolder name="Groups" />,
         },
         {
             label: t('Pages'),
-            icon: <i className="fa-solid fa-flag"></i>,
+            icon: <i className="fa-solid fa-flag fa-lg"></i>,
             path: '/pages',
             element: <PlaceHolder name="Pages" />,
         },
@@ -119,14 +132,10 @@ export default function MyApp() {
     const antdMenuItems = convertMenuItemToAntd(menuItems);
     const routes = convertMenuItemToRoute(menuItems);
 
-    const handleMenuClick = () => {
-        setCollapsed(!collapsed);
-    };
-
     return (
         <Layout style={{ minHeight: '100vh' }}>
             {!hydrated && <LoadingFullScreen />}
-            <Sider collapsible collapsed={collapsed} onCollapse={handleMenuClick} width={250}>
+            <Sider collapsible width={250} breakpoint="lg">
                 <div
                     style={{
                         height: 64,
@@ -155,7 +164,7 @@ export default function MyApp() {
                     </Space>
                 </Header>
 
-                <Content style={{ padding: '10px', position: 'relative' }}>
+                <Content style={{ padding: '18px', position: 'relative' }}>
                     {!profile ? (
                         <LoadingFullScreen onlyFillContainer />
                     ) : (
@@ -174,7 +183,10 @@ export default function MyApp() {
                 </Content>
 
                 <Footer style={{ textAlign: 'center' }}>
-                    Useful Script - Facebook All In One @2024
+                    Facebook All In One ©{new Date().getFullYear()} - Cretead by{' '}
+                    <a href="https://github.com/Useful-Scripts-Extension" target="_blank">
+                        Useful-Scripts
+                    </a>
                 </Footer>
             </Layout>
         </Layout>

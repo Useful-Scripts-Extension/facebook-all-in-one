@@ -15,6 +15,7 @@ export default function MyTable({
   onClickExport,
   onClickDelete,
   keyExtractor = (item) => item.key,
+  style
 }: Readonly<{
   data: any[],
   columns: any[],
@@ -27,7 +28,8 @@ export default function MyTable({
   onClickReload?: () => void,
   onClickExport?: (data: any[], type: string) => void,
   onClickDelete?: (data: any[]) => void,
-  keyExtractor?: (item: any) => string
+  keyExtractor?: (item: any) => string,
+  style?: React.CSSProperties
 }>) {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
@@ -168,7 +170,8 @@ export default function MyTable({
       fixedHeader
       size={size}
       loading={loading}
-      scroll={{ y: "calc(100vh - 300px)", x: "max-content" }}
+      // https://github.com/ant-design/ant-design/issues/8392#issuecomment-1201244845
+      scroll={{ x: "max-content" }}
       tableLayout='auto'
       dataSource={dataSearched}
       columns={columns}
@@ -184,9 +187,10 @@ export default function MyTable({
         showSizeChanger: true,
         showTotal: (total, range) => t("Total {{total}} items", { total }),
         size: "default",
-        //   simple: true,
+        // simple: true,
         style: { alignItems: "center" },
       }}
+      style={style}
     />
   );
 }

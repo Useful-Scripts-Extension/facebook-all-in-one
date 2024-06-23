@@ -88,6 +88,7 @@ export default function FirstMessages() {
     const scrollHeightRef = useRef(0);
     const _setMessages = msgs => {
         scrollHeightRef.current = listRef.current?.scrollHeight || 0;
+        console.log(msgs);
         setMessages(msgs);
     };
     useLayoutEffect(() => {
@@ -134,10 +135,10 @@ export default function FirstMessages() {
                 friendUid,
                 before: now.valueOf(),
             });
-            console.log(msgs);
             _setMessages(msgs);
             message.destroy();
-            message.success(t('Fetch completed'));
+            if (msgs?.length > 0) message.success(t('Fetch completed'));
+            else message.info(t('No data to show'));
 
             setPagingState(
                 produce(state => {
@@ -170,7 +171,9 @@ export default function FirstMessages() {
             });
 
             console.log('first message', data);
-            if (data?.[0]) {
+            if (!data?.length) {
+                message.info(t('No data to show'));
+            } else {
                 const msgs = await getMessagesAfterMsgId({
                     friendUid: friendProfile.uid,
                     msgId: data[0].message_id,
@@ -179,7 +182,7 @@ export default function FirstMessages() {
                 _setMessages(msgs);
                 setPagingState(
                     produce(state => {
-                        state.hasNext = msgs.length > 1;
+                        state.hasNext = msgs?.length > 1;
                         state.hasPrev = true;
                     })
                 );
@@ -267,6 +270,49 @@ export default function FirstMessages() {
         }
     };
 
+    const renderMessages = () => {
+        if (!messagesGrouped?.length) return null;
+        return (
+            <List
+                header={
+                    <Space style={{ display: 'flex', justifyContent: 'center' }}>
+                        <Button
+                            type="primary"
+                            onClick={fetchPrev}
+                            loading={pagingState.fetchingPrev}
+                            disabled={!pagingState.hasPrev}
+                        >
+                            {!pagingState.fetchingPrev && <i className="fas fa-arrow-up" />}
+                            {pagingState.hasPrev ? t('Fetch previous') : t('No more message')}
+                        </Button>
+                    </Space>
+                }
+                split={false}
+                dataSource={messagesGrouped}
+                renderItem={msg => (
+                    <MessageItem
+                        message={msg}
+                        myProfile={myProfile}
+                        friendProfile={friendProfile}
+                    />
+                )}
+                footer={
+                    <Space style={{ display: 'flex', justifyContent: 'center' }}>
+                        <Button
+                            type="primary"
+                            onClick={fetchNext}
+                            loading={pagingState.fetchingNext}
+                            disabled={!pagingState.hasNext}
+                        >
+                            {!pagingState.fetchingNext && <i className="fas fa-arrow-down" />}
+                            {pagingState.hasNext ? t('Fetch next') : t('No more message')}
+                        </Button>
+                    </Space>
+                }
+            />
+        );
+    };
+
     return (
         <Space direction="vertical" style={{ width: '100%' }}>
             <Space direction="horizontal">
@@ -329,43 +375,7 @@ export default function FirstMessages() {
                     padding: 12,
                 }}
             >
-                <List
-                    header={
-                        <Space style={{ display: 'flex', justifyContent: 'center' }}>
-                            <Button
-                                type="primary"
-                                onClick={fetchPrev}
-                                loading={pagingState.fetchingPrev}
-                                disabled={!pagingState.hasPrev}
-                            >
-                                {!pagingState.fetchingPrev && <i className="fas fa-arrow-up" />}
-                                {pagingState.hasPrev ? t('Fetch previous') : t('No more message')}
-                            </Button>
-                        </Space>
-                    }
-                    split={false}
-                    dataSource={messagesGrouped}
-                    renderItem={msg => (
-                        <MessageItem
-                            message={msg}
-                            myProfile={myProfile}
-                            friendProfile={friendProfile}
-                        />
-                    )}
-                    footer={
-                        <Space style={{ display: 'flex', justifyContent: 'center' }}>
-                            <Button
-                                type="primary"
-                                onClick={fetchNext}
-                                loading={pagingState.fetchingNext}
-                                disabled={!pagingState.hasNext}
-                            >
-                                {!pagingState.fetchingNext && <i className="fas fa-arrow-down" />}
-                                {pagingState.hasNext ? t('Fetch next') : t('No more message')}
-                            </Button>
-                        </Space>
-                    }
-                />
+                {renderMessages()}
             </Space>
         </Space>
     );

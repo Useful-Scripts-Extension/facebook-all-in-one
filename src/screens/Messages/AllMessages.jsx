@@ -249,7 +249,7 @@ export default function AllMessages() {
     ];
 
     return (
-        <>
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
             <Row align="middle" style={{ margin: '16px' }}>
                 <MessageTwoTone style={{ fontSize: '24px', marginRight: '10px' }} />
                 <Title level={3} style={{ margin: 0 }}>
@@ -270,7 +270,8 @@ export default function AllMessages() {
                 onClickExport={onClickExport}
                 onClickDelete={onClickDelete}
                 keyExtractor={_ => _.id}
+                style={{ flex: 1, maxHeight: '100%' }}
             />
-        </>
+        </div>
     );
 }

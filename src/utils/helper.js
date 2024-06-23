@@ -9,7 +9,7 @@ export function objectToCsv(arr) {
     for (const row of arr) {
         const values = headers.map(header => {
             const cellValue = row[header];
-            const escapedCellValue = cellValue.toString().replace(/"/g, '\\"');
+            const escapedCellValue = cellValue?.toString().replace(/"/g, '\\"') || '';
             return `"${escapedCellValue}"`;
         });
         csvRows.push(values.join(','));

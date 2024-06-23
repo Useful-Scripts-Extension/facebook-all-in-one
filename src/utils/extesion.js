@@ -1,7 +1,7 @@
 import { ExtensionID } from '../constants';
 
 export function connectExtension() {
-    return sendMessage({ action: 'fb_bulkDownload_init' });
+    return sendMessage({ action: 'fb_allInOne_init' });
 }
 
 export function fetchExtension(url, options) {

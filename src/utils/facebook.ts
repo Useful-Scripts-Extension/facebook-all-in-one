@@ -31,8 +31,8 @@ export function fetchGraphQl(params: object | string = {}, url: string = ''): Pr
 
 // #region user
 
-export function getUserAvatarFromUid(uid: string) {
-    return `https://graph.facebook.com/${uid}/picture?height=500&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
+export function getUserAvatarFromUid(uid: string, size = 500) {
+    return `https://graph.facebook.com/${uid}/picture?height=${size}&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
 }
 
 export async function getEntityInfoFromId(entityID: string, context = 'DEFAULT') {
@@ -296,10 +296,11 @@ export async function getMessagesAtTimeCursor({
     );
     try {
         const n = JSON.parse(res.split('\n')[0]);
-        if (n.o0.data.message_thread) return n.o0.data.message_thread.messages.nodes;
+        if (n.o0.data.message_thread) return n.o0.data.message_thread.messages.nodes || [];
     } catch (i) {
         console.error(i.message);
     }
+    return [];
 }
 
 // #endregion
@@ -309,14 +310,20 @@ export async function getMessagesAtTimeCursor({
 export async function getAllFriends({ myUid, targetUid }) {
     const res = await fetchGraphQl({
         doc_id: '4936483286421335',
-        av: myUid,
-        dpr: 1,
-        __a: 1,
-        __user: myUid,
-        variables: { id: targetUid || myUid, query: '', scale: 1 },
+        variables: {
+            id: targetUid || myUid,
+            query: '',
+            scale: 1,
+        },
     });
     try {
-        return JSON.parse(res || '{}')?.data?.user?.friends?.edges || [];
+        const json = JSON.parse(res || '{}')?.data?.user?.friends?.edges || [];
+        return json.map(item => ({
+            uid: item.node.id,
+            name: item.node.name,
+            // avatar: item.node.photo?.uri,
+            avatar: getUserAvatarFromUid(item.node.id),
+        }));
     } catch (e) {
         return [];
     }
