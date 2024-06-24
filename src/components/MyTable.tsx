@@ -59,7 +59,7 @@ const MyTable = forwardRef((props: Readonly<{
           key: keyExtractor(_), // inject key for antd table
         }))
 
-      if (showSelectedOnly) {
+      if (showSelectedOnly && dataSelected?.length) {
         const selectedKeys = new Set(dataSelected.map(keyExtractor))
         return searchData.filter((_) => selectedKeys.has(keyExtractor(_)))
       }
