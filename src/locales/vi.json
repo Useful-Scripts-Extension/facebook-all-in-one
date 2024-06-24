@@ -27,6 +27,7 @@
         "Selected {{count}} messages": "Đã chọn {{count}} tin nhắn",
         "Export": "Xuất",
         "Export selected": "Xuất đã chọn",
+        "Export {{count}}": "Xuất {{count}}",
         "Delete": "Xóa",
         "Select all": "Chọn tất cả",
         "Invert selection": "Đảo ngược lựa chọn",
@@ -39,6 +40,41 @@
         "Failed to fetch": "Tải thất bại",
         "Fetch completed": "Tải hoàn tất",
         "No data to export": "Không có dữ liệu để xuất",
-        "Unsupported file type": "Định dạng tập tin không được hỗ trợ"
+        "Unsupported file type": "Định dạng tập tin không được hỗ trợ",
+
+        "Show all": "Hiển thị tất cả",
+        "Show selected only": "Chỉ hiển thị đã chọn",
+
+        "All friends": "Tất cả bạn bè",
+        "Friends manager": "Quản lý bạn bè",
+        "Friend requests": "Yêu cầu kết bạn",
+        "Follow": "Đang theo dõi",
+        "Unfriend": "Huỷ kết bạn",
+        "Unfriend user": "Huỳ kết bạn",
+        "Are you sure want to unfriend this user?": "Bạn có chắc muốn huỳ kết bạn người này?",
+
+        "Find locked friends": "Lọc bạn bè bị khoá",
+        "Fetching friends...": "Đang tải danh sách bạn bè...",
+        "Unfriend {{count}}": "Huỷ kết bạn {{count}}",
+        "Unfriend {{count}} friends": "Huỷ kết bạn {{count}} người",
+        "Are you sure to unfriend these friends?": "Bạn có chắc muốn huỷ kết bạn với họ?",
+        "Unfriending...": "Đang huỷ kết bạn...",
+        "Unfriend completed": "Huỷ kết bạn thành công",
+        "Fail to unfriend": "Huỷ kết bạn thất bại",
+        "Selected {{count}} friends": "Đã chọn {{count}} bạn bè",
+
+        "Poke": "Chọc",
+        "Poke friend": "Chọc bạn bè",
+        "Poke {{count}} friends": "Chọc {{count}} người bạn",
+        "Are you sure want to poke this friend?": "Bạn có chắc muốn chọc người này?",
+        "Are you sure want to poke these friends?": "Bạn có chắc muốn chọc những người này?",
+        "Poking...": "Đang chọc...",
+        "Poke completed": "Chọc thành công",
+        "Failed to poke": "Chọc thất bại",
+        "Are you sure to poke these friends?": "Bạn có chắc muốn chọc những người này?",
+        "Poke completed {{count}} friends": "Chọc thành công {{count}} bạn bè",
+
+        "Found {{count}} locked friends": "Tìm thấy {{count}} bè bị khoá",
+        "No locked friends found": "Không có bạn bè nào bị khoá"
     }
 }

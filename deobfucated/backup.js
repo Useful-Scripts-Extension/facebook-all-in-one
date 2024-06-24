@@ -51,6 +51,28 @@ let incoming_friend_request = {
     variables: { count: 8, cursor: '100088240509373', scale: 1 },
 };
 
+// https://www.facebook.com/friends
+const incoming_friend_request2 = {
+    fb_api_caller_class: 'RelayModern',
+    fb_api_req_friendly_name: 'FriendingCometFriendRequestsGridPaginationQuery',
+    variables: { count: 20, cursor: '61552550918705', scale: 2 },
+    doc_id: '5073444706045886',
+};
+
+// https://www.facebook.com/friends/requests
+const friend_request = {
+    fb_api_caller_class: 'RelayModern',
+    fb_api_req_friendly_name: 'FriendingCometFriendRequestsRootQuery',
+    variables: { scale: 2 },
+    doc_id: '4851458921570237',
+};
+const friend_request_paging = {
+    fb_api_caller_class: 'RelayModern',
+    fb_api_req_friendly_name: 'FriendingCometFriendRequestsSectionPanelPaginationQuery',
+    variables: { count: 20, cursor: '100028909149830', scale: 2 },
+    doc_id: '4843321999100134',
+};
+
 let unfriend = {
     doc_id: '2316924651742928',
     av: '100004848287494',

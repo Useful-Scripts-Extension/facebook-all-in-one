@@ -34,3 +34,12 @@ export function formatTime(t) {
         year: 'numeric',
     });
 }
+
+export function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// https://stackoverflow.com/a/37511463/11898496
+export function removeAccent(str = '') {
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}

@@ -348,4 +348,66 @@ export async function unfriend({ myUid, targetUid }) {
     return json;
 }
 
+export async function pokeFriend({ myUid, targetUid }) {
+    const res = await fetchGraphQl({
+        doc_id: '5028133957233114',
+        variables: {
+            input: {
+                client_mutation_id: '1',
+                actor_id: myUid,
+                user_id: targetUid,
+            },
+        },
+    });
+    const json = JSON.parse(res || '{}');
+    if (json.errors?.length) throw new Error(json.errors[0].message);
+    return json;
+}
+
+export async function getProfileFriendsSection({ myUid, cursor = null }) {
+    let res = await fetchGraphQl({
+        doc_id: '4186250744800382',
+        variables: {
+            count: 8,
+            cursor: cursor,
+            scale: 2,
+            id: btoa(`app_collection:${myUid}:2356318349:2`),
+        },
+    });
+    return JSON.parse(res);
+}
+
+export async function getAllLockedFriends({ myUid, onFound, onPage }) {
+    let lockedFriends = [];
+    let cursor = null;
+    let pageNum = 1;
+    while (true) {
+        const res = await getProfileFriendsSection({ myUid, cursor });
+        console.log(res);
+        const { edges, page_info } = res.data.node.pageItems;
+
+        for (let item of edges) {
+            if (!item?.node?.subtitle_text) {
+                const user = {
+                    uid: item.node.node.id,
+                    url: item.node.url,
+                    name: item.node.title.text,
+                    avatar: item.node.image?.uri,
+                    avatarLarge: getUserAvatarFromUid(item.node.id),
+                };
+                lockedFriends.push(user);
+                if (typeof onFound === 'function') await onFound(user, lockedFriends);
+            }
+        }
+
+        await onPage(pageNum);
+
+        const { has_next_page, end_cursor } = page_info;
+        if (!has_next_page) break;
+        cursor = end_cursor;
+        pageNum++;
+    }
+    return lockedFriends;
+}
+
 // #endregion

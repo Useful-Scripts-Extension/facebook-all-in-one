@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     App,
     Avatar,
@@ -7,6 +7,7 @@ import {
     Image,
     Popconfirm,
     Row,
+    Space,
     Tag,
     Tooltip,
     Typography,
@@ -14,10 +15,16 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import useStore, { selectors } from '../../store';
-import { getAllFriends, getFbUrlFromId, unfriend } from '../../utils/facebook';
+import {
+    getAllFriends,
+    getAllLockedFriends,
+    getFbUrlFromId,
+    pokeFriend,
+    unfriend,
+} from '../../utils/facebook';
 import MyTable from '../../components/MyTable';
 import fileDownload from 'js-file-download';
-import { objectToCsv } from '../../utils/helper';
+import { objectToCsv, sleep } from '../../utils/helper';
 
 const { Title } = Typography;
 
@@ -30,15 +37,15 @@ export default function AllFriends() {
     const friends = useStore(selectors.friends);
     const setFriends = useStore(selectors.setFriends);
 
-    const friendsData = useMemo(() => {
-        return friends.map((f, i) => ({
-            ...f,
-            recent: i,
-            url: getFbUrlFromId(f.uid),
-        }));
-    }, [friends]);
+    const friendsData = friends.map((f, i) => ({
+        ...f,
+        recent: i,
+        url: getFbUrlFromId(f.uid),
+    }));
 
     const [loading, setLoading] = useState(false);
+    const [loadingLockedFriends, setLoadingLockedFriends] = useState(0);
+    const tableRef = useRef(null);
 
     useEffect(() => {
         if (profile?.uid && !friends?.length) onClickReload();
@@ -73,9 +80,14 @@ export default function AllFriends() {
     };
 
     const onClickUnfriendSelected = async selectedData => {
+        const removedUid = new Set();
         for (let record of selectedData) {
-            await onClickUnfriendOne(record);
+            const success = await onClickUnfriendOne(record);
+            if (success) removedUid.add(record.uid);
+            await sleep(500);
         }
+        // TODO: check why state not update correctly inside for-loop?
+        setFriends(friends.filter(f => !removedUid.has(f.uid)));
     };
 
     const onClickUnfriendOne = async record => {
@@ -85,10 +97,65 @@ export default function AllFriends() {
             message.destroy();
             message.success(t('Unfriend completed') + ': ' + record.name);
 
-            setFriends(friends.filter(f => f.uid !== record.uid));
+            setFriends(friends.filter(f => f.uid != record.uid));
+            return true;
         } catch (err) {
             message.error(t('Failed to unfriend') + ': ' + record.name + ': ' + err.message);
             console.log(err);
+            return false;
+        }
+    };
+
+    const onClickPokeSelected = async selectedData => {
+        const pokedUid = new Set();
+        for (let record of selectedData) {
+            const success = await onClickPokeFriend(record);
+            if (success) pokedUid.add(record.uid);
+            await sleep(500);
+        }
+        message.success(t('Poke completed {{count}} friends', { count: pokedUid.size }));
+    };
+
+    const onClickPokeFriend = async record => {
+        try {
+            message.loading(t('Poking...') + ' ' + record.name);
+            await pokeFriend({ myUid: profile?.uid, targetUid: record.uid });
+            message.destroy();
+            message.success(t('Poke completed') + ': ' + record.name);
+            return true;
+        } catch (err) {
+            message.error(t('Failed to poke') + ': ' + record.name + ': ' + err.message);
+            console.log(err);
+            return false;
+        }
+    };
+
+    const onClickFindLockedFriends = async () => {
+        if (loadingLockedFriends) return;
+
+        tableRef.current.clearFilter();
+
+        setLoadingLockedFriends(1);
+        message.loading(t('Fetching locked friends...'));
+        const lockedFriends = await getAllLockedFriends({
+            myUid: profile?.uid,
+            onFound: (user, lockedUsers) => {
+                message.info(
+                    t('Found locked friend') + ': ' + user.name + ' (' + lockedUsers.length + ')'
+                );
+            },
+            onPage: pageNum => {
+                setLoadingLockedFriends(pageNum);
+            },
+        });
+        setLoadingLockedFriends(false);
+
+        if (lockedFriends?.length) {
+            setFriends(lockedFriends.concat(friends));
+            tableRef.current.setDataSelected(lockedFriends);
+            message.success(t('Found {{count}} locked friends', { count: lockedFriends.length }));
+        } else {
+            message.success(t('No locked friends found'));
         }
     };
 
@@ -136,11 +203,25 @@ export default function AllFriends() {
             dataIndex: 'action',
             key: 'download',
             render: (text, record, index) => (
-                <>
+                <Space.Compact>
+                    <Tooltip title={t('Poke')}>
+                        <Popconfirm
+                            title={t('Poke friend')}
+                            description={t('Are you sure want to poke this friend?')}
+                            onConfirm={() => onClickPokeFriend(record)}
+                            okText={t('Yes')}
+                            cancelText={t('No')}
+                        >
+                            <Button
+                                type="default"
+                                icon={<i className="fa-regular fa-hand-point-right"></i>}
+                            ></Button>
+                        </Popconfirm>
+                    </Tooltip>
                     <Tooltip title={t('Unfriend')}>
                         <Popconfirm
                             title={t('Unfriend user')}
-                            description={t('Are you sure to unfriend this user?')}
+                            description={t('Are you sure want to unfriend this user?')}
                             onConfirm={() => onClickUnfriendOne(record)}
                             okText={t('Yes')}
                             cancelText={t('No')}
@@ -152,7 +233,7 @@ export default function AllFriends() {
                             ></Button>
                         </Popconfirm>
                     </Tooltip>
-                </>
+                </Space.Compact>
             ),
             width: 150,
             align: 'right',
@@ -176,6 +257,20 @@ export default function AllFriends() {
                     {t('Reload')}
                 </Button>
 
+                <Button
+                    type="primary"
+                    loading={loadingLockedFriends || loading}
+                    icon={
+                        loadingLockedFriends || loading ? null : (
+                            <i className="fa-solid fa-lock"></i>
+                        )
+                    }
+                    onClick={onClickFindLockedFriends}
+                >
+                    {t('Find locked friends') +
+                        (loadingLockedFriends ? ` (${loadingLockedFriends})` : '')}
+                </Button>
+
                 <Dropdown
                     menu={{
                         items: [
@@ -186,28 +281,45 @@ export default function AllFriends() {
                     }}
                 >
                     <Button type="primary" icon={<i className="fa-solid fa-download"></i>}>
-                        {dataSelected?.length
-                            ? t('Export {{count}}', { count: dataSelected.length })
-                            : t('Export')}
+                        {t('Export') +
+                            ' ' +
+                            (dataSelected?.length ? dataSelected?.length : friendsData.length)}
                     </Button>
                 </Dropdown>
 
                 {dataSelected?.length ? (
-                    <Popconfirm
-                        title={t('Unfriend {{count}} friends', { count: dataSelected.length })}
-                        description={t('Are you sure to unfriend these friends?')}
-                        onConfirm={() => onClickUnfriendSelected(dataSelected)}
-                        okText={t('Yes')}
-                        cancelText={t('No')}
-                    >
-                        <Button
-                            danger
-                            type="primary"
-                            icon={<i className="fa-solid fa-trash-can"></i>}
+                    <>
+                        <Popconfirm
+                            title={t('Poke {{count}} friends', { count: dataSelected.length })}
+                            description={t('Are you sure to poke these friends?')}
+                            onConfirm={() => onClickPokeSelected(dataSelected)}
+                            okText={t('Yes')}
+                            cancelText={t('No')}
                         >
-                            {t('Unfriend {{count}}', { count: dataSelected.length })}
-                        </Button>
-                    </Popconfirm>
+                            <Button
+                                type="default"
+                                icon={<i className="fa-solid fa-hand-point-right"></i>}
+                            >
+                                {t('Poke') + (dataSelected.length ? ' ' + dataSelected.length : '')}
+                            </Button>
+                        </Popconfirm>
+                        <Popconfirm
+                            title={t('Unfriend {{count}} friends', { count: dataSelected.length })}
+                            description={t('Are you sure to unfriend these friends?')}
+                            onConfirm={() => onClickUnfriendSelected(dataSelected)}
+                            okText={t('Yes')}
+                            cancelText={t('No')}
+                        >
+                            <Button
+                                danger
+                                type="primary"
+                                icon={<i className="fa-solid fa-trash-can"></i>}
+                            >
+                                {t('Unfriend') +
+                                    (dataSelected.length ? ' ' + dataSelected.length : '')}
+                            </Button>
+                        </Popconfirm>
+                    </>
                 ) : null}
 
                 {dataSelected.length ? (
@@ -230,6 +342,7 @@ export default function AllFriends() {
                 </Tag>
             </Row>
             <MyTable
+                ref={tableRef}
                 data={friendsData}
                 columns={columns}
                 size="small"

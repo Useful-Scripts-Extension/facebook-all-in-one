@@ -226,12 +226,11 @@ export default function AllMessages() {
             dataIndex: 'action',
             key: 'download',
             render: (text, record, index) => (
-                <>
+                <Space.Compact>
                     <Tooltip title={t('First messages')}>
                         <Button
                             type="primary"
                             icon={<i className="fa-solid fa-clock-rotate-left"></i>}
-                            style={{ marginRight: '5px' }}
                             onClick={onClickFirstMessages(record)}
                         ></Button>
                     </Tooltip>
@@ -239,7 +238,6 @@ export default function AllMessages() {
                         <Button
                             type="primary"
                             icon={<i className="fa-solid fa-download"></i>}
-                            style={{ marginRight: '5px' }}
                         ></Button>
                     </Tooltip>
                     <Tooltip title={t('Delete')}>
@@ -249,7 +247,7 @@ export default function AllMessages() {
                             icon={<i className="fa-solid fa-trash"></i>}
                         ></Button>
                     </Tooltip>
-                </>
+                </Space.Compact>
             ),
             width: 150,
             align: 'right',
@@ -283,9 +281,9 @@ export default function AllMessages() {
                     }}
                 >
                     <Button type="primary" icon={<i className="fa-solid fa-download"></i>}>
-                        {dataSelected?.length
-                            ? t('Export {{count}}', { count: dataSelected.length })
-                            : t('Export')}
+                        {t('Export') +
+                            ' ' +
+                            (dataSelected.length ? ' ' + dataSelected.length : messages.length)}
                     </Button>
                 </Dropdown>
 
@@ -296,7 +294,7 @@ export default function AllMessages() {
                         icon={<i className="fa-solid fa-trash-can"></i>}
                         onClick={() => onClickDelete(dataSelected)}
                     >
-                        {t('Delete {{count}}', { count: dataSelected.length })}
+                        {t('Delete') + (dataSelected.length ? ' ' + dataSelected.length : '')}
                     </Button>
                 ) : null}
 
