@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { App, Avatar, Button, Dropdown, Image, Row, Space, Tag, Tooltip, Typography } from 'antd';
-import { MessageTwoTone } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import fileDownload from 'js-file-download';
 import { useNavigate } from 'react-router-dom';
@@ -28,18 +27,18 @@ export default function AllMessages() {
 
     const onClickReload = () => {
         if (loading) return;
-        message.loading(t('Fetching messages...'));
+        const key = 'onClickReload';
+        message.loading({ key, content: t('Fetching messages...') });
         setLoading(true);
         getAllMessages()
             .then(data => {
                 console.log(data);
                 if (!data?.length) return message.error(t('No data to show'));
                 setMessages(data);
-                message.destroy();
-                message.success(t('Fetch completed'));
+                message.success({ key, content: t('Fetch completed') });
             })
             .catch(err => {
-                message.error(t('Failed to fetch') + ': ' + err.message);
+                message.error({ key, content: t('Failed to fetch') + ': ' + err.message });
                 console.log(err);
             })
             .finally(() => {
@@ -77,6 +76,100 @@ export default function AllMessages() {
         });
     };
 
+    const renderNameCell = (text, record, index) => {
+        return (
+            <Row align="middle">
+                {record.isGroup ? (
+                    <Dropdown
+                        arrow
+                        overlayStyle={{
+                            maxHeight: '350px',
+                            overflow: 'auto',
+                            border: '1px dashed gray',
+                            borderRadius: '5px',
+                        }}
+                        menu={{
+                            items: [
+                                {
+                                    key: '-1',
+                                    type: 'group',
+                                    label: (
+                                        <Title level={5} style={{ textAlign: 'center' }}>
+                                            {t('{{count}} members', {
+                                                count: record.participants?.length,
+                                            })}
+                                        </Title>
+                                    ),
+                                },
+                                { type: 'divider' },
+                                ...(record.participants?.map?.(_ => ({
+                                    key: _.id,
+                                    label: <b>{_.name}</b>,
+                                    icon: <Avatar shape="square" src={_.avatar} />,
+                                    onClick: () => window.open(getFbUrlFromId(_.id)),
+                                })) || []),
+                            ],
+                        }}
+                    >
+                        <Space>
+                            {record.image ? (
+                                <Avatar shape="square" src={<Image src={record.image} />} />
+                            ) : (
+                                <Avatar.Group max={{ count: 5 }}>
+                                    {record.participants
+                                        .filter(_ => _.id != profile?.id)
+                                        .map(_ => (
+                                            <Avatar key={_.id} src={_.avatar} />
+                                        ))}
+                                </Avatar.Group>
+                            )}
+                        </Space>
+                    </Dropdown>
+                ) : (
+                    <Avatar
+                        shape="square"
+                        src={
+                            <Image
+                                src={
+                                    record.image ||
+                                    getUserAvatarFromUid(record.participants?.[0]?.id)
+                                }
+                                fallback={record.participants?.[0]?.avatar}
+                            />
+                        }
+                    />
+                )}
+                <a href={record.url} target="_blank" style={{ marginLeft: '10px' }}>
+                    <b>{record.name}</b>
+                </a>
+            </Row>
+        );
+    };
+
+    const renderActionCell = (text, record, index) => {
+        return (
+            <Space.Compact>
+                <Tooltip title={t('First messages')}>
+                    <Button
+                        type="primary"
+                        icon={<i className="fa-solid fa-clock-rotate-left"></i>}
+                        onClick={onClickFirstMessages(record)}
+                    ></Button>
+                </Tooltip>
+                <Tooltip title={t('Download')}>
+                    <Button type="primary" icon={<i className="fa-solid fa-download"></i>}></Button>
+                </Tooltip>
+                <Tooltip title={t('Delete')}>
+                    <Button
+                        type="primary"
+                        danger
+                        icon={<i className="fa-solid fa-trash"></i>}
+                    ></Button>
+                </Tooltip>
+            </Space.Compact>
+        );
+    };
+
     const columns = [
         {
             title: '#',
@@ -93,75 +186,7 @@ export default function AllMessages() {
             dataIndex: 'name',
             key: 'name',
             sorter: (a, b) => a.name.localeCompare(b.name),
-            render: (text, record, index) => {
-                return (
-                    <Row align="middle">
-                        {record.isGroup ? (
-                            <Dropdown
-                                arrow
-                                overlayStyle={{
-                                    maxHeight: '350px',
-                                    overflow: 'auto',
-                                    border: '1px dashed gray',
-                                    borderRadius: '5px',
-                                }}
-                                menu={{
-                                    items: [
-                                        {
-                                            key: '-1',
-                                            type: 'group',
-                                            label: (
-                                                <Title level={5} style={{ textAlign: 'center' }}>
-                                                    {t('{{count}} members', {
-                                                        count: record.participants?.length,
-                                                    })}
-                                                </Title>
-                                            ),
-                                        },
-                                        { type: 'divider' },
-                                        ...(record.participants?.map?.(_ => ({
-                                            key: _.id,
-                                            label: <b>{_.name}</b>,
-                                            icon: <Avatar shape="square" src={_.avatar} />,
-                                            onClick: () => window.open(getFbUrlFromId(_.id)),
-                                        })) || []),
-                                    ],
-                                }}
-                            >
-                                <Space>
-                                    {record.image ? (
-                                        <Avatar shape="square" src={record.image} />
-                                    ) : (
-                                        <Avatar.Group max={{ count: 5 }}>
-                                            {record.participants
-                                                .filter(_ => _.id != profile?.id)
-                                                .map(_ => (
-                                                    <Avatar key={_.id} src={_.avatar} />
-                                                ))}
-                                        </Avatar.Group>
-                                    )}
-                                </Space>
-                            </Dropdown>
-                        ) : (
-                            <Avatar
-                                shape="square"
-                                src={
-                                    <Image
-                                        src={
-                                            record.image ||
-                                            getUserAvatarFromUid(record.participants?.[0]?.id)
-                                        }
-                                        fallback={record.participants?.[0]?.avatar}
-                                    />
-                                }
-                            />
-                        )}
-                        <a href={record.url} target="_blank" style={{ marginLeft: '10px' }}>
-                            <b>{record.name}</b>
-                        </a>
-                    </Row>
-                );
-            },
+            render: renderNameCell,
             filters: [
                 {
                     text: t('Inactive'),
@@ -225,30 +250,7 @@ export default function AllMessages() {
             title: t('Action'),
             dataIndex: 'action',
             key: 'download',
-            render: (text, record, index) => (
-                <Space.Compact>
-                    <Tooltip title={t('First messages')}>
-                        <Button
-                            type="primary"
-                            icon={<i className="fa-solid fa-clock-rotate-left"></i>}
-                            onClick={onClickFirstMessages(record)}
-                        ></Button>
-                    </Tooltip>
-                    <Tooltip title={t('Download')}>
-                        <Button
-                            type="primary"
-                            icon={<i className="fa-solid fa-download"></i>}
-                        ></Button>
-                    </Tooltip>
-                    <Tooltip title={t('Delete')}>
-                        <Button
-                            type="primary"
-                            danger
-                            icon={<i className="fa-solid fa-trash"></i>}
-                        ></Button>
-                    </Tooltip>
-                </Space.Compact>
-            ),
+            render: renderActionCell,
             width: 150,
             align: 'right',
         },
@@ -310,7 +312,6 @@ export default function AllMessages() {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
             <Row align="middle" style={{ margin: '16px' }}>
-                <MessageTwoTone style={{ fontSize: '24px', marginRight: '10px' }} />
                 <Title level={3} style={{ margin: 0 }}>
                     {t('Messages manager')}
                 </Title>

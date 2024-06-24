@@ -139,10 +139,12 @@ export type MessageObject = {
 };
 export async function getAllMessages(): Promise<Array<MessageObject>> {
     const res = await Promise.all([
+        // normal messages
         fetchGraphQl(
             'viewer(){message_threads{count,nodes{customization_info{emoji,outgoing_bubble_color,participant_customizations{participant_id,nickname}},all_participants{nodes{messaging_actor{name,id,profile_picture}}},thread_type,name,messages_count,image,id}}}'
         ).then(res => JSON.parse(res || '{}')),
 
+        // archived messages
         fetchGraphQl(
             {
                 queries: {
@@ -199,26 +201,6 @@ export async function getAllMessages(): Promise<Array<MessageObject>> {
     return data;
 }
 
-export async function getArchivedMessages(before = Date.now()) {
-    return fetchGraphQl(
-        {
-            queries: {
-                o0: {
-                    doc_id: '1475048592613093',
-                    query_params: {
-                        limit: 500,
-                        before: before,
-                        tags: ['ARCHIVED'],
-                        includeDeliveryReceipts: true,
-                        includeSeqID: false,
-                    },
-                },
-            },
-        },
-        'https://www.facebook.com/api/graphqlbatch/'
-    );
-}
-
 export async function findFirstMessage({
     friendUid,
     startTime,
@@ -263,9 +245,19 @@ export async function getMessagesAfterMsgId({
         'https://www.facebook.com/ajax/mercury/search_context.php'
     );
     const n = JSON.parse(res.substr(9)),
-        t = n.payload.graphql_payload;
+        t = n?.payload?.graphql_payload;
     if (t) return t;
-    else return new Error('There is no results.');
+
+    // let nextMsgIds = n?.payload?.search_context?.[msgId]?.down_message_ids;
+    // if (nextMsgIds?.length)
+    //     return await getMessagesAfterMsgId({
+    //         friendUid,
+    //         msgId: nextMsgIds[0],
+    //         direction,
+    //         limit,
+    //     });
+
+    return new Error('There is no results.');
 }
 
 export async function getMessagesAtTimeCursor({
@@ -296,7 +288,7 @@ export async function getMessagesAtTimeCursor({
     );
     try {
         const n = JSON.parse(res.split('\n')[0]);
-        if (n.o0.data.message_thread) return n.o0.data.message_thread.messages.nodes || [];
+        if (n.o0.data.message_thread) return n.o0.data.message_thread.messages?.nodes || [];
     } catch (i) {
         console.error(i.message);
     }
@@ -317,6 +309,7 @@ export async function getAllFriends({ myUid, targetUid }) {
         },
     });
     try {
+        console.log(JSON.parse(res));
         const json = JSON.parse(res || '{}')?.data?.user?.friends?.edges || [];
         return json.map(item => ({
             uid: item.node.id,
@@ -381,9 +374,10 @@ export async function getAllLockedFriends({ myUid, onFound, onPage }) {
     let lockedFriends = [];
     let cursor = null;
     let pageNum = 1;
+    let loaded = 0,
+        locked = 0;
     while (true) {
         const res = await getProfileFriendsSection({ myUid, cursor });
-        console.log(res);
         const { edges, page_info } = res.data.node.pageItems;
 
         for (let item of edges) {
@@ -395,12 +389,22 @@ export async function getAllLockedFriends({ myUid, onFound, onPage }) {
                     avatar: item.node.image?.uri,
                     avatarLarge: getUserAvatarFromUid(item.node.id),
                 };
+                if (!/^\d+$/.exec(user.uid)) {
+                    try {
+                        let decode = atob(user.uid);
+                        user.uid = /\d+/.exec(decode)?.[0] || user.uid;
+                    } catch (e) {
+                        console.log(e);
+                    }
+                }
                 lockedFriends.push(user);
+                locked++;
                 if (typeof onFound === 'function') await onFound(user, lockedFriends);
             }
         }
 
-        await onPage(pageNum);
+        loaded += edges.length;
+        await onPage(pageNum, loaded, locked);
 
         const { has_next_page, end_cursor } = page_info;
         if (!has_next_page) break;

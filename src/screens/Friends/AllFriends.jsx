@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     App,
     Avatar,
@@ -13,7 +13,6 @@ import {
     Typography,
 } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
 import useStore, { selectors } from '../../store';
 import {
     getAllFriends,
@@ -25,12 +24,12 @@ import {
 import MyTable from '../../components/MyTable';
 import fileDownload from 'js-file-download';
 import { objectToCsv, sleep } from '../../utils/helper';
+import dayjs from 'dayjs';
 
 const { Title } = Typography;
 
 export default function AllFriends() {
     const { message } = App.useApp();
-    const location = useLocation();
     const { t } = useTranslation();
 
     const profile = useStore(selectors.profile);
@@ -53,17 +52,18 @@ export default function AllFriends() {
 
     const onClickReload = () => {
         if (loading) return;
-        message.loading(t('Fetching friends...'));
+        const key = 'onClickReload';
+        message.loading({ key, content: t('Fetching friends...') });
         setLoading(true);
         getAllFriends({ myUid: profile?.uid })
             .then(data => {
                 if (!data?.length) return message.error(t('No data to show'));
                 setFriends(data);
-                message.destroy();
-                message.success(t('Fetch completed'));
+                console.log(data);
+                message.success({ key, content: t('Fetch completed') });
             })
             .catch(err => {
-                message.error(t('Failed to fetch') + ': ' + err.message);
+                message.error({ key, content: t('Failed to fetch') + ': ' + err.message });
                 console.log(err);
             })
             .finally(() => {
@@ -74,8 +74,9 @@ export default function AllFriends() {
     const onClickExport = (selectedData, type) => {
         let dataToSave = selectedData?.length ? selectedData : friends;
         if (!dataToSave?.length) return message.error(t('No data to export'));
-        if (type == 'json') fileDownload(JSON.stringify(dataToSave), 'friends.json');
-        else if (type == 'csv') fileDownload(objectToCsv(dataToSave), 'friends.csv');
+        let filename = 'friends_' + dayjs().format('YYYY-MM-DD-HHmmss');
+        if (type == 'json') fileDownload(JSON.stringify(dataToSave), filename + '.json');
+        else if (type == 'csv') fileDownload(objectToCsv(dataToSave), filename + '.csv');
         else message.error(t('Unsupported file type'));
     };
 
@@ -91,16 +92,19 @@ export default function AllFriends() {
     };
 
     const onClickUnfriendOne = async record => {
+        const key = 'onClickUnfriendOne' + record.uid;
         try {
-            message.loading(t('Unfriending...') + ' ' + record.name);
+            message.loading({ key, content: t('Unfriending...') + ' ' + record.name });
             await unfriend({ myUid: profile?.uid, targetUid: record.uid });
-            message.destroy();
-            message.success(t('Unfriend completed') + ': ' + record.name);
+            message.success({ key, content: t('Unfriend completed') + ': ' + record.name });
 
             setFriends(friends.filter(f => f.uid != record.uid));
             return true;
         } catch (err) {
-            message.error(t('Failed to unfriend') + ': ' + record.name + ': ' + err.message);
+            message.error({
+                key,
+                content: t('Failed to unfriend') + ': ' + record.name + ': ' + err.message,
+            });
             console.log(err);
             return false;
         }
@@ -117,14 +121,17 @@ export default function AllFriends() {
     };
 
     const onClickPokeFriend = async record => {
+        const key = 'onClickPokeFriend' + record.uid;
         try {
-            message.loading(t('Poking...') + ' ' + record.name);
+            message.loading({ key, content: t('Poking...') + ' ' + record.name });
             await pokeFriend({ myUid: profile?.uid, targetUid: record.uid });
-            message.destroy();
-            message.success(t('Poke completed') + ': ' + record.name);
+            message.success({ key, content: t('Poke completed') + ': ' + record.name });
             return true;
         } catch (err) {
-            message.error(t('Failed to poke') + ': ' + record.name + ': ' + err.message);
+            message.error({
+                key,
+                content: t('Failed to poke') + ': ' + record.name + ': ' + err.message,
+            });
             console.log(err);
             return false;
         }
@@ -136,27 +143,41 @@ export default function AllFriends() {
         tableRef.current.clearFilter();
 
         setLoadingLockedFriends(1);
-        message.loading(t('Fetching locked friends...'));
-        const lockedFriends = await getAllLockedFriends({
-            myUid: profile?.uid,
-            onFound: (user, lockedUsers) => {
-                message.info(
-                    t('Found locked friend') + ': ' + user.name + ' (' + lockedUsers.length + ')'
-                );
-            },
-            onPage: pageNum => {
-                setLoadingLockedFriends(pageNum);
-            },
-        });
-        setLoadingLockedFriends(false);
+        message.loading(t('Finding locked friends...'));
+        const tempFriends = [...friends];
 
-        if (lockedFriends?.length) {
-            setFriends(lockedFriends.concat(friends));
-            tableRef.current.setDataSelected(lockedFriends);
-            message.success(t('Found {{count}} locked friends', { count: lockedFriends.length }));
-        } else {
-            message.success(t('No locked friends found'));
+        try {
+            const lockedFriends = await getAllLockedFriends({
+                myUid: profile?.uid,
+                onFound: (user, lockedUsers) => {
+                    message.info(
+                        t('Found locked friend') +
+                            ': ' +
+                            user.name +
+                            ' (' +
+                            lockedUsers.length +
+                            ')'
+                    );
+                    setFriends([user, ...tempFriends]);
+                },
+                onPage: (pageNum, loaded, locked) => {
+                    setLoadingLockedFriends(locked + '/' + loaded);
+                },
+            });
+
+            if (lockedFriends?.length) {
+                setFriends(lockedFriends.concat(friends));
+                tableRef.current.setDataSelected(lockedFriends);
+                message.success(
+                    t('Found {{count}} locked friends', { count: lockedFriends.length })
+                );
+            } else {
+                message.success(t('No locked friends found'));
+            }
+        } catch (err) {
+            message.error(t('Failed to find locked friends') + ': ' + err.message);
         }
+        setLoadingLockedFriends(false);
     };
 
     const columns = [
@@ -259,12 +280,8 @@ export default function AllFriends() {
 
                 <Button
                     type="primary"
-                    loading={loadingLockedFriends || loading}
-                    icon={
-                        loadingLockedFriends || loading ? null : (
-                            <i className="fa-solid fa-lock"></i>
-                        )
-                    }
+                    loading={loadingLockedFriends}
+                    icon={loadingLockedFriends ? null : <i className="fa-solid fa-lock"></i>}
                     onClick={onClickFindLockedFriends}
                 >
                     {t('Find locked friends') +

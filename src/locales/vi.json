@@ -54,6 +54,10 @@
         "Are you sure want to unfriend this user?": "Bạn có chắc muốn huỳ kết bạn người này?",
 
         "Find locked friends": "Lọc bạn bè bị khoá",
+        "Finding locked friends...": "Đang tìm bạn bè bị khoá",
+        "Found locked friend": "Tìm thấy bạn bè bị khoá",
+        "Failed to find locked friends": "Lỗi khi tìm bạn bè bị khoá",
+
         "Fetching friends...": "Đang tải danh sách bạn bè...",
         "Unfriend {{count}}": "Huỷ kết bạn {{count}}",
         "Unfriend {{count}} friends": "Huỷ kết bạn {{count}} người",
@@ -75,6 +79,8 @@
         "Poke completed {{count}} friends": "Chọc thành công {{count}} bạn bè",
 
         "Found {{count}} locked friends": "Tìm thấy {{count}} bè bị khoá",
-        "No locked friends found": "Không có bạn bè nào bị khoá"
+        "No locked friends found": "Không có bạn bè nào bị khoá",
+
+        "Detect unfriend": "Ai huỷ kết bạn"
     }
 }

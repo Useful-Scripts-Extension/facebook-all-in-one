@@ -48,6 +48,7 @@ export default function FirstMessages() {
     const friendUidParam = location.state?.friendUid;
 
     const myProfile = useStore(selectors.profile);
+
     const [fetchingFirstMsg, setFetchingFirstMsg] = useState(false);
     const [pagingState, setPagingState] = useState({
         fetchingNext: false,
@@ -99,6 +100,8 @@ export default function FirstMessages() {
 
     // fetch functions
     const getRecentMessage = async () => {
+        const key = 'getRecentMessage';
+
         try {
             setPagingState(
                 produce(state => {
@@ -111,34 +114,31 @@ export default function FirstMessages() {
             if (/\d+$/.test(friendUrlOrUid)) {
                 friendUid = friendUrlOrUid;
             } else {
-                message.loading(t('Fetching friend uid...'));
+                message.loading({ key, content: t('Fetching friend uid...') });
                 friendUid = await getUidFromUrl(friendUrlOrUid);
-                message.destroy();
             }
             if (!friendUid) throw new Error('Invalid friend url');
 
             let friendInfo = CACHED.friend[friendUid];
             if (!friendInfo) {
-                message.loading(t('Fetching friend info...'));
+                message.loading({ key, content: t('Fetching friend info...') });
                 friendInfo = await getUserInfoFromUid(friendUid);
-                message.destroy();
                 if (!friendInfo) throw new Error('Failed to fetch friend info');
             }
             setFriendProfile(friendInfo);
 
             // fetch recent messages
-            message.loading(t('Fetching recent messages...'));
+            message.loading({ key, content: t('Fetching recent messages...') });
             const now = dayjs();
             setTime(now);
 
             const msgs = await getMessagesAtTimeCursor({
                 friendUid,
-                before: now.valueOf(),
+                time: now.valueOf(),
             });
             _setMessages(msgs);
-            message.destroy();
-            if (msgs?.length > 0) message.success(t('Fetch completed'));
-            else message.info(t('No data to show'));
+            if (msgs?.length > 0) message.success({ key, content: t('Fetch completed') });
+            else message.info({ key, content: t('No data to show') });
 
             setPagingState(
                 produce(state => {
@@ -149,7 +149,7 @@ export default function FirstMessages() {
                 })
             );
         } catch (e) {
-            message.error(t('Failed to fetch') + ': ' + e.message);
+            message.error({ key, content: t('Failed to fetch') + ': ' + e.message });
         }
     };
 
@@ -174,15 +174,23 @@ export default function FirstMessages() {
             if (!data?.length) {
                 message.info(t('No data to show'));
             } else {
-                const msgs = await getMessagesAfterMsgId({
+                let msgs = await getMessagesAfterMsgId({
                     friendUid: friendProfile.uid,
                     msgId: data[0].message_id,
                 });
+                if (!msgs?.length) {
+                    msgs = await getMessagesAtTimeCursor({
+                        friendUid: friendProfile.uid,
+                        time: dayjs(Number(data[0].timestamp_precise)).add(1, 'day').valueOf(),
+                    });
+                }
                 console.log(msgs);
-                _setMessages(msgs);
+                if (msgs.length) _setMessages(msgs);
+                else message.info(t('No data to show'));
+
                 setPagingState(
                     produce(state => {
-                        state.hasNext = msgs?.length > 1;
+                        state.hasNext = true;
                         state.hasPrev = true;
                     })
                 );
@@ -199,10 +207,17 @@ export default function FirstMessages() {
         let time = dayjs(value).valueOf();
         const msg = await getMessagesAtTimeCursor({
             friendUid: friendProfile.uid,
-            before: time,
+            time: time,
         });
         console.log(msg);
         _setMessages(msg);
+
+        setPagingState(
+            produce(state => {
+                state.hasNext = true;
+                state.hasPrev = true;
+            })
+        );
     };
 
     const fetchNext = async () => {

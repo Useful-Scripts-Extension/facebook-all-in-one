@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { App, Layout, Menu, Space } from 'antd';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -7,10 +7,13 @@ import useStore, { selectors } from './store';
 import logo from './assets/logo.png';
 import { connectExtension } from './utils/extesion';
 import { getUserInfoFromUid } from './utils/facebook';
-import { AllMessages, FirstMessages } from './screens/Messages';
-import { AllFriends } from './screens/Friends';
 
 const { Header, Sider, Content, Footer } = Layout;
+
+const AllMessages = React.lazy(() => import('./screens/Messages/AllMessages'));
+const FirstMessages = React.lazy(() => import('./screens/Messages/FirstMessages'));
+const AllFriends = React.lazy(() => import('./screens/Friends/AllFriends'));
+const DetectUnfriend = React.lazy(() => import('./screens/Friends/DetectUnfriend'));
 
 function convertMenuItemToAntd(items) {
     return items.map(item => {
@@ -75,17 +78,17 @@ export default function MyApp() {
         },
         {
             label: t('Messages'),
-            icon: <i className="fa-brands fa-facebook-messenger fa-lg"></i>,
+            icon: <i className="fa-brands fa-facebook-messenger"></i>,
             children: [
                 {
                     label: t('All messages'),
-                    icon: <i className="fa-solid fa-comments fa-lg"></i>,
+                    icon: <i className="fa-solid fa-comments"></i>,
                     path: '/messages/all',
                     element: <AllMessages />,
                 },
                 {
                     label: t('First messages'),
-                    icon: <i className="fa-solid fa-clock-rotate-left fa-lg"></i>,
+                    icon: <i className="fa-solid fa-clock-rotate-left"></i>,
                     path: '/messages/first',
                     element: <FirstMessages />,
                 },
@@ -93,23 +96,29 @@ export default function MyApp() {
         },
         {
             label: t('Friends'),
-            icon: <i className="fa-solid fa-user-group fa-lg"></i>,
+            icon: <i className="fa-solid fa-user-group"></i>,
             children: [
                 {
                     label: t('All friends'),
-                    icon: <i className="fa-solid fa-users fa-lg"></i>,
+                    icon: <i className="fa-solid fa-users"></i>,
                     path: '/friends/all',
                     element: <AllFriends />,
                 },
                 {
+                    label: t('Detect unfriend'),
+                    icon: <i className="fa-solid fa-user-slash"></i>,
+                    path: '/friends/detect-unfriend',
+                    element: <DetectUnfriend />,
+                },
+                {
                     label: t('Friend requests'),
-                    icon: <i className="fa-solid fa-user-plus fa-lg"></i>,
+                    icon: <i className="fa-solid fa-user-plus"></i>,
                     path: '/friends/requests',
                     element: <PlaceHolder name="Friend requests" />,
                 },
                 {
                     label: t('Follow'),
-                    icon: <i className="fa-solid fa-person-walking-arrow-right fa-lg"></i>,
+                    icon: <i className="fa-solid fa-person-walking-arrow-right"></i>,
                     path: '/friends/follow',
                     element: <PlaceHolder name="Followings / Followers" />,
                 },
@@ -117,13 +126,13 @@ export default function MyApp() {
         },
         {
             label: t('Groups'),
-            icon: <i className="fa-solid fa-users-line fa-lg"></i>,
+            icon: <i className="fa-solid fa-users-line"></i>,
             path: '/groups',
             element: <PlaceHolder name="Groups" />,
         },
         {
             label: t('Pages'),
-            icon: <i className="fa-solid fa-flag fa-lg"></i>,
+            icon: <i className="fa-solid fa-flag"></i>,
             path: '/pages',
             element: <PlaceHolder name="Pages" />,
         },
@@ -168,17 +177,19 @@ export default function MyApp() {
                     {!profile ? (
                         <LoadingFullScreen onlyFillContainer />
                     ) : (
-                        <Routes>
-                            {routes.map(route => {
-                                return (
-                                    <Route
-                                        key={route.path}
-                                        path={route.path}
-                                        element={route.element}
-                                    />
-                                );
-                            })}
-                        </Routes>
+                        <React.Suspense fallback={<LoadingFullScreen onlyFillContainer />}>
+                            <Routes>
+                                {routes.map(route => {
+                                    return (
+                                        <Route
+                                            key={route.path}
+                                            path={route.path}
+                                            element={route.element}
+                                        />
+                                    );
+                                })}
+                            </Routes>
+                        </React.Suspense>
                     )}
                 </Content>
 
