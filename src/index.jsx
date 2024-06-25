@@ -8,7 +8,6 @@ import './assets/style.css';
 import MyApp from './MyApp';
 
 export function Container() {
-    console.log('test');
     const darkMode = useStore(selectors.darkMode);
 
     return (

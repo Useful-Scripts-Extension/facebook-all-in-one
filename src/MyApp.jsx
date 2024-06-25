@@ -55,7 +55,6 @@ export default function MyApp() {
     const setProfile = useStore(selectors.setProfile);
 
     useEffect(() => {
-        console.log('init');
         connectExtension()
             .then(data => {
                 console.log(data);

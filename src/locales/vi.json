@@ -60,8 +60,8 @@
         "Poked": "Đã chọc",
         "Locked": "Bị khoá",
         "Unfriended": "Đã huỷ kết bạn",
-        "Blocked message": "Chặn tin nhắn",
         "New friend": "Bạn mới",
+        "Blocked messages": "Bị chặn tin nhắn",
 
         "Locked friends": "Bạn bè bị khoá",
         "Find locked friends": "Lọc bạn bè bị khoá",
@@ -70,17 +70,16 @@
         "Failed to find locked friends": "Lỗi khi tìm bạn bè bị khoá",
 
         "Found": "Tìm thấy",
-        "Blocked messages": "Bị chặn tin nhắn",
         "Check who is blocking your messages": "Xem ai đang chặn tin nhắn của bạn",
         "TIP: You can select friends to check instead of check all": "TIP: Bạn có thể chọn bạn bè để kiểm tra, thay vì kiểm tra tất cả",
-        "Check who (in {{count}} friends selected) is blocking your messages": "Xem ai (trong {{count}} người đang chọn) đang chặn tin nhắn của bạn",
+        "Check in {{count}} friends selected": "Kiểm tra {{count}} người đang chọn",
         "Found {{count}} friends blocking your messages": "Tìm thấy {{count}} người đang chặn tin nhắn của bạn",
         "Finding blocked messages...": "Đang tìm người chặn tin nhắn...",
         "No blocked messages found": "Không có ai đang chặn tin nhắn của bạn",
 
         "Fetching friends...": "Đang tải danh sách bạn bè...",
         "Unfriend {{count}}": "Huỷ kết bạn {{count}}",
-        "Unfriend {{count}} friends": "Huỷ kết bạn {{count}} người",
+        "Unfriend {{count}} selected friends": "Huỷ kết bạn {{count}} người bạn đang chọn",
         "Are you sure to unfriend these friends?": "Bạn có chắc muốn huỷ kết bạn với họ?",
         "Unfriending...": "Đang huỷ kết bạn...",
         "Unfriend completed": "Huỷ kết bạn thành công",
@@ -89,7 +88,7 @@
 
         "Poke": "Chọc",
         "Poke friend": "Chọc bạn bè",
-        "Poke {{count}} friends": "Chọc {{count}} người bạn",
+        "Poke {{count}} selected friends": "Chọc {{count}} người bạn đang chọn",
         "Are you sure want to poke this friend?": "Bạn có chắc muốn chọc người này?",
         "Are you sure want to poke these friends?": "Bạn có chắc muốn chọc những người này?",
         "Poking...": "Đang chọc...",
@@ -103,11 +102,20 @@
 
         "Detect unfriend": "Ai huỷ kết bạn",
         "Check who unfriend you": "Kiểm tra ai đã huỷ kết bạn với bạn",
-        "Upload friends file": "Tải lên file bạn bè",
-        "Click or drag file to this area to upload": "Click hoặc kéo thả file vào đây",
+        "How it work: Export friends data to file then compare it later": "Cách hoạt động: Lưu danh sách bạn bè ra file trước sau đó so sánh",
+        "Upload friends file": "Tải lên file bạn bè đã lưu",
+        "Click or drag file to this area to upload": "Click chọn hoặc kéo thả file vào đây",
         "Support only .json backup file": "Chỉ hỗ trợ file .json được xuất từ trang này",
         "Found {{count}} new friends": "Tìm thấy {{count}} bạn mới",
         "Found {{count}} unfriended": "Tìm thấy {{count}} người huỷ kết bạn",
-        "File empty": "File không có dữ liệu"
+        "File empty": "File không có dữ liệu",
+
+        "Request friend": "Yêu cầu kết bạn",
+        "Request make friend": "Gửi yêu cầu kết bạn",
+        "Are you sure want to request make friend with this user?": "Bạn có chắc muốn gửi yêu cầu kết bạn với người này?",
+        "Requested friend": "Đã gửi kết bạn",
+        "Request friend {{count}} selected users": "Gửi yêu cầu kết bạn cho {{count}} người đang chọn",
+        "Are you sure to add friend these users?": "Bạn có chắc muốn gửi kết bạn cho họ?",
+        "Add friend {{count}} selected users": "Gửi kết bạn cho {{count}} người đang chọn"
     }
 }

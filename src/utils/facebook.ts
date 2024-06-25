@@ -348,6 +348,29 @@ export async function unfriend({ myUid, targetUid }) {
     return json;
 }
 
+export async function addFriend({ myUid, targetUid }) {
+    const res = await fetchGraphQl({
+        doc_id: '6294978773852692',
+        variables: {
+            input: {
+                attribution_id_v2:
+                    'FriendingCometRoot.react,comet.friending,tap_tabbar,1667288605315,127814,2356318349,',
+                friend_requestee_ids: [targetUid],
+                people_you_may_know_location: 'friends_center',
+                refs: [null],
+                source: 'people_you_may_know',
+                warn_ack_for_ids: [],
+                actor_id: myUid,
+                client_mutation_id: '9',
+            },
+            scale: 2,
+        },
+    });
+    const json = JSON.parse(res);
+    if (json.errors?.length) throw new Error(json.errors[0].message);
+    return json;
+}
+
 export async function pokeFriend({ myUid, targetUid }) {
     const res = await fetchGraphQl({
         doc_id: '5028133957233114',

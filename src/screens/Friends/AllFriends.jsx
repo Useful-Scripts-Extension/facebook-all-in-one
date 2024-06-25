@@ -11,10 +11,12 @@ import {
     Tag,
     Tooltip,
     Typography,
+    Popover,
 } from 'antd';
 import { useTranslation } from 'react-i18next';
 import useStore, { selectors } from '../../store';
 import {
+    addFriend,
     checkCanMessage,
     getAllFriends,
     getAllLockedFriends,
@@ -36,8 +38,9 @@ const FRIEND_STATUS = {
     POKED: 'Poked',
     LOCKED: 'Locked',
     UNFRIENDED: 'Unfriended',
-    BLOCKED_MESSAGE: 'Blocked message',
+    REQUESTED: 'Requested friend',
     NEW: 'New friend',
+    BLOCKED_MESSAGE: 'Blocked messages',
 };
 
 const FRIEND_STATUS_COLOR = {
@@ -46,6 +49,20 @@ const FRIEND_STATUS_COLOR = {
     [FRIEND_STATUS.UNFRIENDED]: 'red',
     [FRIEND_STATUS.BLOCKED_MESSAGE]: 'red',
     [FRIEND_STATUS.NEW]: 'blue',
+    [FRIEND_STATUS.REQUESTED]: 'pink',
+};
+
+const canAddFriend = friend => {
+    const s = friend?.statuses || [];
+    return (
+        !s.includes(FRIEND_STATUS.REQUESTED) &&
+        (s.includes(FRIEND_STATUS.NEW) || s.includes(FRIEND_STATUS.UNFRIENDED))
+    );
+};
+
+const canUnfriend = friend => {
+    const s = friend?.statuses || [];
+    return !s.includes(FRIEND_STATUS.NEW) && !s.includes(FRIEND_STATUS.UNFRIENDED);
 };
 
 export default function AllFriends() {
@@ -74,20 +91,24 @@ export default function AllFriends() {
         if (profile?.uid && !friends?.length) onClickReload();
     }, []);
 
-    const updateFriendStatus = (friend, status, override = false, insertAtStart = false) => {
+    const updateFriendStatus = (friends, status, override = false, insertAtStart = false) => {
         setFriends(preFriends => {
             const newFriends = produce(preFriends, draft => {
-                let found = draft.find(f => f.uid == friend.uid);
-                if (found) {
-                    if (!found.statuses) found.statuses = [];
-                    if (!override && !found.statuses.includes(status)) found.statuses.push(status);
-                    else {
-                        if (!Array.isArray(status)) status = [status];
-                        found.statuses = status;
+                if (!Array.isArray(friends)) friends = [friends];
+                for (let friend of friends) {
+                    let found = draft.find(f => f.uid == friend.uid);
+                    if (found) {
+                        if (!found.statuses) found.statuses = [];
+                        if (!override && !found.statuses.includes(status))
+                            found.statuses.push(status);
+                        else {
+                            if (!Array.isArray(status)) status = [status];
+                            found.statuses = status;
+                        }
+                    } else {
+                        if (insertAtStart) draft.unshift({ ...friend, statuses: [status] });
+                        else draft.push({ ...friend, statuses: [status] });
                     }
-                } else {
-                    if (insertAtStart) draft.unshift({ ...friend, statuses: [status] });
-                    else draft.push({ ...friend, statuses: [status] });
                 }
                 return draft;
             });
@@ -106,6 +127,7 @@ export default function AllFriends() {
                 setFriends(data);
                 console.log(data);
                 message.success({ key, content: t('Fetch completed') });
+                tableRef.current.clearFilter();
             })
             .catch(err => {
                 message.error({ key, content: t('Failed to fetch') + ': ' + err.message });
@@ -182,6 +204,33 @@ export default function AllFriends() {
         message.success(t('Poke completed {{count}} friends', { count: pokedUid.size }));
     };
 
+    const onClickAddFriend = async record => {
+        const key = 'onClickAddFriend' + record.uid;
+        try {
+            message.loading({ key, content: t('Sending friend request...') + ' ' + record.name });
+            await addFriend({ myUid: profile?.uid, targetUid: record.uid });
+            message.success({
+                key,
+                content: t('Send friend request success') + ': ' + record.name,
+            });
+            updateFriendStatus(record, FRIEND_STATUS.REQUESTED);
+            return true;
+        } catch (e) {
+            message.error({ key, content: t('Failed to send friend request') + ': ' + e.message });
+            return false;
+        }
+    };
+
+    const onClickAddFriendSelected = async selectedData => {
+        const addedUid = new Set();
+        for (let record of selectedData) {
+            const success = await onClickAddFriend(record);
+            if (success) addedUid.add(record.uid);
+            await sleep(500);
+        }
+        message.success(t('Send friend request success {{count}} users', { count: addedUid.size }));
+    };
+
     const onClickFindLockedFriends = async () => {
         if (loadingLockedFriends) return;
 
@@ -243,6 +292,7 @@ export default function AllFriends() {
             if (!(await checkCanMessage(friend.uid))) {
                 blockedMessages.push(friend);
                 tableRef.current.setDataSelected(blockedMessages);
+                updateFriendStatus(friend, FRIEND_STATUS.BLOCKED_MESSAGE);
                 message.success({
                     key,
                     content: t('Found') + ' ' + friend.name + ' (' + blockedMessages.length + ')',
@@ -275,7 +325,7 @@ export default function AllFriends() {
                 let foundInFile = json.find(f => f.uid == friend.uid);
                 if (!foundInFile) newFriends.push(friend);
             }
-            newFriends.forEach(f => updateFriendStatus(f, FRIEND_STATUS.NEW));
+            updateFriendStatus(newFriends, FRIEND_STATUS.NEW);
             message.success(t('Found {{count}} new friends', { count: newFriends.length }));
 
             // check unfriended
@@ -286,14 +336,14 @@ export default function AllFriends() {
                     removedFriends.push(friend);
                 }
             }
-            removedFriends.forEach(f => updateFriendStatus(f, FRIEND_STATUS.UNFRIENDED));
+            updateFriendStatus(removedFriends, FRIEND_STATUS.UNFRIENDED);
             message.success(t('Found {{count}} unfriended', { count: removedFriends.length }));
 
-            // show unfriended
-            if (removedFriends.length) {
-                tableRef.current.setDataSelected(removedFriends);
-                tableRef.current.setShowSelectedOnly(true);
+            // show unfriended / new friends
+            if (removedFriends.length || newFriends.length) {
+                tableRef.current.setDataSelected([...removedFriends, ...newFriends]);
             }
+            console.log('set tableRef done');
         } catch (err) {
             message.error(err.message);
         }
@@ -338,7 +388,8 @@ export default function AllFriends() {
             sorter: (a, b) => a.status - b.status,
             width: 150,
             filters: Object.entries(FRIEND_STATUS).map(([key, value]) => ({
-                text: t(value),
+                text:
+                    t(value) + ' (' + friends.filter(f => f.statuses?.includes(value)).length + ')',
                 value,
             })),
             onFilter: (value, record) => record.statuses?.includes(value),
@@ -383,21 +434,42 @@ export default function AllFriends() {
                             ></Button>
                         </Popconfirm>
                     </Tooltip>
-                    <Tooltip title={t('Unfriend')}>
-                        <Popconfirm
-                            title={t('Unfriend user')}
-                            description={t('Are you sure want to unfriend this user?')}
-                            onConfirm={() => onClickUnfriendOne(record)}
-                            okText={t('Yes')}
-                            cancelText={t('No')}
-                        >
-                            <Button
-                                danger
-                                type="primary"
-                                icon={<i className="fa-solid fa-trash-can"></i>}
-                            ></Button>
-                        </Popconfirm>
-                    </Tooltip>
+
+                    {record.statuses?.includes(FRIEND_STATUS.UNFRIENDED) ||
+                    record.statuses?.includes(FRIEND_STATUS.NEW) ? (
+                        <Tooltip title={t('Request friend')}>
+                            <Popconfirm
+                                title={t('Request make friend')}
+                                description={t(
+                                    'Are you sure want to request make friend with this user?'
+                                )}
+                                onConfirm={() => onClickAddFriend(record)}
+                                okText={t('Yes')}
+                                cancelText={t('No')}
+                            >
+                                <Button
+                                    type="default"
+                                    icon={<i className="fa-solid fa-user-plus"></i>}
+                                ></Button>
+                            </Popconfirm>
+                        </Tooltip>
+                    ) : (
+                        <Tooltip title={t('Unfriend')}>
+                            <Popconfirm
+                                title={t('Unfriend user')}
+                                description={t('Are you sure want to unfriend this user?')}
+                                onConfirm={() => onClickUnfriendOne(record)}
+                                okText={t('Yes')}
+                                cancelText={t('No')}
+                            >
+                                <Button
+                                    danger
+                                    type="primary"
+                                    icon={<i className="fa-solid fa-trash-can"></i>}
+                                ></Button>
+                            </Popconfirm>
+                        </Tooltip>
+                    )}
                 </Space.Compact>
             ),
             width: 150,
@@ -406,6 +478,10 @@ export default function AllFriends() {
     ];
 
     const renderTitle = dataSelected => {
+        const _canAddFriend = dataSelected?.filter?.(canAddFriend);
+        const _canUnfriend = dataSelected?.filter?.(canUnfriend);
+
+        console.log('renderTitle', _canAddFriend.length, _canUnfriend.length);
         return (
             <>
                 <Button
@@ -421,62 +497,6 @@ export default function AllFriends() {
                 >
                     {t('Reload')}
                 </Button>
-
-                <Space.Compact>
-                    <Tooltip title={t('Find locked friends')}>
-                        <Button
-                            loading={loadingLockedFriends}
-                            icon={<i className="fa-solid fa-lock"></i>}
-                            onClick={onClickFindLockedFriends}
-                        >
-                            {t('Locked friends') +
-                                (loadingLockedFriends ? ` (${loadingLockedFriends})` : '')}
-                        </Button>
-                    </Tooltip>
-
-                    <Tooltip
-                        title={
-                            dataSelected?.length
-                                ? t(
-                                      'Check who (in {{count}} friends selected) is blocking your messages',
-                                      {
-                                          count: dataSelected?.length,
-                                      }
-                                  )
-                                : t('Check who is blocking your messages') +
-                                  '\n' +
-                                  t('TIP: You can select friends to check instead of check all')
-                        }
-                    >
-                        <Button
-                            loading={loadingBlockedMessages}
-                            icon={<i className="fa-solid fa-comment-slash"></i>}
-                            onClick={onClickFindBlockedMessages}
-                        >
-                            {t('Blocked messages') +
-                                (loadingBlockedMessages ? ` (${loadingBlockedMessages})` : '')}
-                        </Button>
-                    </Tooltip>
-
-                    <Tooltip title={t('Check who unfriend you')}>
-                        <UploadModal
-                            accept=".json"
-                            title={t('Upload friends file')}
-                            text={t('Click or drag file to this area to upload')}
-                            hint={t('Support only .json backup file')}
-                            onSubmit={onUploadFriendsFile}
-                            renderButton={({ showModal }) => (
-                                <Button
-                                    // loading={loadingLockedFriends}
-                                    icon={<i className="fa-solid fa-user-large-slash"></i>}
-                                    onClick={showModal}
-                                >
-                                    {t('Detect unfriend')}
-                                </Button>
-                            )}
-                        />
-                    </Tooltip>
-                </Space.Compact>
 
                 <Dropdown
                     menu={{
@@ -494,46 +514,136 @@ export default function AllFriends() {
                     </Button>
                 </Dropdown>
 
-                {dataSelected?.length ? (
-                    <Space.Compact>
-                        <Popconfirm
-                            title={t('Poke {{count}} friends', { count: dataSelected.length })}
-                            description={t('Are you sure to poke these friends?')}
-                            onConfirm={() => onClickPokeSelected(dataSelected)}
-                            okText={t('Yes')}
-                            cancelText={t('No')}
+                <Space.Compact>
+                    <Tooltip title={t('Find locked friends')}>
+                        <Button
+                            loading={loadingLockedFriends}
+                            icon={<i className="fa-solid fa-lock"></i>}
+                            onClick={onClickFindLockedFriends}
                         >
-                            <Button
-                                type="default"
-                                icon={<i className="fa-solid fa-hand-point-right"></i>}
-                            >
-                                {t('Poke') + (dataSelected.length ? ' ' + dataSelected.length : '')}
-                            </Button>
-                        </Popconfirm>
-                        <Popconfirm
-                            title={t('Unfriend {{count}} friends', { count: dataSelected.length })}
-                            description={t('Are you sure to unfriend these friends?')}
-                            onConfirm={() => onClickUnfriendSelected(dataSelected)}
-                            okText={t('Yes')}
-                            cancelText={t('No')}
-                        >
-                            <Button
-                                danger
-                                type="primary"
-                                icon={<i className="fa-solid fa-trash-can"></i>}
-                            >
-                                {t('Unfriend') +
-                                    (dataSelected.length ? ' ' + dataSelected.length : '')}
-                            </Button>
-                        </Popconfirm>
-                    </Space.Compact>
-                ) : null}
+                            {t('Locked friends')}
+                            {loadingLockedFriends ? ` (${loadingLockedFriends})` : ''}
+                        </Button>
+                    </Tooltip>
 
-                {/* {dataSelected.length ? (
-                    <Tag color="processing" style={{ marginLeft: '10px', fontWeight: 'bold' }}>
-                        {t('Selected {{count}} friends', { count: dataSelected.length })}
-                    </Tag>
-                ) : null} */}
+                    <Popover
+                        title={t('Check who is blocking your messages')}
+                        content={
+                            dataSelected?.length
+                                ? t('Check in {{count}} friends selected', {
+                                      count: dataSelected?.length,
+                                  })
+                                : t('TIP: You can select friends to check instead of check all')
+                        }
+                    >
+                        <Button
+                            loading={loadingBlockedMessages}
+                            icon={<i className="fa-solid fa-comment-slash"></i>}
+                            onClick={onClickFindBlockedMessages}
+                        >
+                            {t('Blocked messages')}
+                            {loadingBlockedMessages ? ` (${loadingBlockedMessages})` : ''}
+                        </Button>
+                    </Popover>
+
+                    <UploadModal
+                        accept=".json"
+                        title={t('Upload friends file')}
+                        text={t('Click or drag file to this area to upload')}
+                        hint={t('Support only .json backup file')}
+                        onSubmit={onUploadFriendsFile}
+                        renderButton={({ showModal }) => (
+                            <Popover
+                                title={t('Check who unfriend you')}
+                                content={t(
+                                    'How it work: Export friends data to file then compare it later'
+                                )}
+                            >
+                                <Button
+                                    // loading={loadingLockedFriends}
+                                    icon={<i className="fa-solid fa-user-large-slash"></i>}
+                                    onClick={showModal}
+                                >
+                                    {t('Detect unfriend')}
+                                </Button>
+                            </Popover>
+                        )}
+                    />
+                    {dataSelected?.length ? (
+                        <>
+                            <Popconfirm
+                                title={t('Poke {{count}} selected friends', {
+                                    count: dataSelected.length,
+                                })}
+                                description={t('Are you sure to poke these friends?')}
+                                onConfirm={() => onClickPokeSelected(dataSelected)}
+                                okText={t('Yes')}
+                                cancelText={t('No')}
+                            >
+                                <Tooltip
+                                    title={t('Poke {{count}} selected friends', {
+                                        count: dataSelected.length,
+                                    })}
+                                >
+                                    <Button
+                                        type="default"
+                                        icon={<i className="fa-solid fa-hand-point-right"></i>}
+                                    >
+                                        {dataSelected.length ? ' ' + dataSelected.length : ''}
+                                    </Button>
+                                </Tooltip>
+                            </Popconfirm>
+
+                            {_canAddFriend?.length > 0 ? (
+                                <Popconfirm
+                                    title={t('Request friend {{count}} selected users', {
+                                        count: _canAddFriend.length,
+                                    })}
+                                    description={t('Are you sure to add friend these users?')}
+                                    onConfirm={() => onClickAddFriendSelected(_canAddFriend)}
+                                    okText={t('Yes')}
+                                    cancelText={t('No')}
+                                >
+                                    <Tooltip
+                                        title={t('Add friend {{count}} selected users', {
+                                            count: _canAddFriend.length,
+                                        })}
+                                    >
+                                        <Button icon={<i className="fa-solid fa-user-plus"></i>}>
+                                            {_canAddFriend.length}
+                                        </Button>
+                                    </Tooltip>
+                                </Popconfirm>
+                            ) : null}
+
+                            {_canUnfriend?.length > 0 ? (
+                                <Popconfirm
+                                    title={t('Unfriend {{count}} selected friends', {
+                                        count: _canUnfriend.length,
+                                    })}
+                                    description={t('Are you sure to unfriend these friends?')}
+                                    onConfirm={() => onClickUnfriendSelected(_canUnfriend)}
+                                    okText={t('Yes')}
+                                    cancelText={t('No')}
+                                >
+                                    <Tooltip
+                                        title={t('Unfriend {{count}} selected friends', {
+                                            count: _canUnfriend.length,
+                                        })}
+                                    >
+                                        <Button
+                                            danger
+                                            type="primary"
+                                            icon={<i className="fa-solid fa-trash-can"></i>}
+                                        >
+                                            {_canUnfriend.length}
+                                        </Button>
+                                    </Tooltip>
+                                </Popconfirm>
+                            ) : null}
+                        </>
+                    ) : null}
+                </Space.Compact>
             </>
         );
     };
