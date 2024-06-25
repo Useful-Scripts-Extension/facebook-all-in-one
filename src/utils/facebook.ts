@@ -120,6 +120,56 @@ export async function getUidFromUrl(url: string) {
 
 // #endregion
 
+// #region photos
+
+export async function getProfilePhotos({ uid, count = 8, cursor = '' }) {
+    const res = await fetchGraphQl({
+        doc_id: '4820192058049838',
+        fb_api_caller_class: 'RelayModern',
+        fb_api_req_friendly_name: 'ProfileCometAppCollectionPhotosRendererPaginationQuery',
+        variables: {
+            count: count,
+            cursor: cursor,
+            scale: 1,
+            id: btoa(`app_collection:${uid}:2305272732:5`),
+        },
+    });
+    const json = JSON.parse(res);
+    console.log(json);
+    const { edges = [], page_info } = json?.data?.node?.pageItems || {};
+    return {
+        photos: edges.map(edge => ({
+            url: edge?.node?.url,
+            thumbnail: edge?.node?.image?.uri,
+            image: edge?.node?.node?.viewer_image?.uri,
+            width: edge?.node?.node?.viewer_image?.width,
+            height: edge?.node?.node?.viewer_image?.height,
+            accessibility_caption: edge?.node?.node?.accessibility_caption,
+        })),
+        page_info,
+    };
+}
+
+export async function getAllProfilePhotos({ uid, onProgress }) {
+    const photos = [];
+    let cursor = '';
+    while (true) {
+        try {
+            const res = await getProfilePhotos({ uid, cursor });
+            if (!res?.photos?.length || !res?.page_info?.has_next_page) break;
+            photos.push(...res.photos);
+            onProgress?.(photos);
+            cursor = res.page_info.end_cursor;
+        } catch (e) {
+            console.log(e);
+            break;
+        }
+    }
+    return photos;
+}
+
+// #endregion
+
 // #region messages
 
 export type MessageObject = {

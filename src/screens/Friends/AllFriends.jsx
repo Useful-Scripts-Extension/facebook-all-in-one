@@ -20,6 +20,7 @@ import {
     checkCanMessage,
     getAllFriends,
     getAllLockedFriends,
+    getAllProfilePhotos,
     getFbUrlFromId,
     pokeFriend,
     unfriend,
@@ -89,6 +90,10 @@ export default function AllFriends() {
 
     useEffect(() => {
         if (profile?.uid && !friends?.length) onClickReload();
+
+        // getAllProfilePhotos({ uid: '100003208487477', onProgress: data => console.log(data) }).then(
+        //     console.log
+        // );
     }, []);
 
     const updateFriendStatus = (friends, status, override = false, insertAtStart = false) => {
