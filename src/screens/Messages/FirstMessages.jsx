@@ -93,10 +93,12 @@ export default function FirstMessages() {
         setMessages(msgs);
     };
     useLayoutEffect(() => {
-        let newScollHeight = listRef.current?.scrollHeight || 0;
-        if (newScollHeight > scrollHeightRef.current)
-            listRef.current?.scrollTo({ top: newScollHeight - scrollHeightRef.current });
-    }, [messages]);
+        if (pagingState.fetchingPrev) {
+            let newScollHeight = listRef.current?.scrollHeight || 0;
+            if (newScollHeight > scrollHeightRef.current)
+                listRef.current?.scrollTo({ top: newScollHeight - scrollHeightRef.current });
+        }
+    }, [messages, pagingState.fetchingPrev]);
 
     // fetch functions
     const getRecentMessage = async () => {
