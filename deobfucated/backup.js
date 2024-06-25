@@ -247,7 +247,7 @@ const ReactionId = {
     angry: '444813342392137',
 };
 
-let postReactionsCount = {
+let getPostReactionsCount = {
     fb_api_caller_class: 'RelayModern',
     fb_api_req_friendly_name: 'CometUFIReactionIconTooltipContentQuery',
     variables: {
@@ -257,7 +257,7 @@ let postReactionsCount = {
     doc_id: '6235145276554312',
 };
 
-let reactionToPost = {
+let addReactionToPost = {
     av: '100004848287494',
     doc_id: '5149167608480558',
     variables: {

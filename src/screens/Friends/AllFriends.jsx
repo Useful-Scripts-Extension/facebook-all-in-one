@@ -36,10 +36,10 @@ const { Title } = Typography;
 
 const FRIEND_STATUS = {
     POKED: 'Poked',
-    LOCKED: 'Locked',
     UNFRIENDED: 'Unfriended',
     REQUESTED: 'Requested friend',
     NEW: 'New friend',
+    LOCKED: 'Locked',
     BLOCKED_MESSAGE: 'Blocked messages',
 };
 
@@ -66,7 +66,7 @@ const canUnfriend = friend => {
 };
 
 export default function AllFriends() {
-    const { message } = App.useApp();
+    const { message, notification } = App.useApp();
     const { t } = useTranslation();
 
     const profile = useStore(selectors.profile);
@@ -119,7 +119,7 @@ export default function AllFriends() {
     const onClickReload = () => {
         if (loading) return;
         const key = 'onClickReload';
-        message.loading({ key, content: t('Fetching friends...') });
+        message.loading({ key, content: t('Fetching friends...') }, 0);
         setLoading(true);
         getAllFriends({ myUid: profile?.uid })
             .then(data => {
@@ -150,7 +150,7 @@ export default function AllFriends() {
     const onClickUnfriendOne = async record => {
         const key = 'onClickUnfriendOne' + record.uid;
         try {
-            message.loading({ key, content: t('Unfriending...') + ' ' + record.name });
+            message.loading({ key, content: t('Unfriending...') + ' ' + record.name }, 0);
             await unfriend({ myUid: profile?.uid, targetUid: record.uid });
             message.success({ key, content: t('Unfriend completed') + ': ' + record.name });
 
@@ -173,13 +173,19 @@ export default function AllFriends() {
             if (success) removedUid.add(record.uid);
             await sleep(500);
         }
-        message.success(t('Unfriended completed {{count}} friends', { count: removedUid.size }));
+        notification.success({
+            message: t('Success'),
+            description: t('Unfriended completed {{count}} friends', {
+                count: removedUid.size + '/' + selectedData.length,
+            }),
+            duration: 0,
+        });
     };
 
     const onClickPokeFriend = async record => {
         const key = 'onClickPokeFriend' + record.uid;
         try {
-            message.loading({ key, content: t('Poking...') + ' ' + record.name });
+            message.loading({ key, content: t('Poking...') + ' ' + record.name }, 0);
             await pokeFriend({ myUid: profile?.uid, targetUid: record.uid });
             message.success({ key, content: t('Poke completed') + ': ' + record.name });
             updateFriendStatus(record, FRIEND_STATUS.POKED);
@@ -201,13 +207,22 @@ export default function AllFriends() {
             if (success) pokedUid.add(record.uid);
             await sleep(500);
         }
-        message.success(t('Poke completed {{count}} friends', { count: pokedUid.size }));
+        notification.success({
+            message: t('Success'),
+            description: t('Poke completed {{count}} friends', {
+                count: pokedUid.size + '/' + selectedData.length,
+            }),
+            duration: 0,
+        });
     };
 
     const onClickAddFriend = async record => {
         const key = 'onClickAddFriend' + record.uid;
         try {
-            message.loading({ key, content: t('Sending friend request...') + ' ' + record.name });
+            message.loading(
+                { key, content: t('Sending friend request...') + ' ' + record.name },
+                0
+            );
             await addFriend({ myUid: profile?.uid, targetUid: record.uid });
             message.success({
                 key,
@@ -228,7 +243,13 @@ export default function AllFriends() {
             if (success) addedUid.add(record.uid);
             await sleep(500);
         }
-        message.success(t('Send friend request success {{count}} users', { count: addedUid.size }));
+        notification.success({
+            message: t('Success'),
+            description: t('Send friend request success {{count}} users', {
+                count: addedUid.size + '/' + selectedData.length,
+            }),
+            duration: 0,
+        });
     };
 
     const onClickFindLockedFriends = async () => {
@@ -236,7 +257,7 @@ export default function AllFriends() {
 
         tableRef.current.clearFilter();
 
-        setLoadingLockedFriends(1);
+        setLoadingLockedFriends('...');
         message.loading(t('Finding locked friends...'));
 
         try {
@@ -244,30 +265,39 @@ export default function AllFriends() {
                 myUid: profile?.uid,
                 onFound: (user, lockedUsers) => {
                     message.info(
-                        t('Found locked friend') +
-                            ': ' +
-                            user.name +
-                            ' (' +
-                            lockedUsers.length +
-                            ')'
+                        t('Found locked friend') + `: ${user.name} (${lockedUsers.length})`
                     );
                     updateFriendStatus(user, FRIEND_STATUS.LOCKED);
                 },
                 onPage: (pageNum, loaded, locked) => {
-                    setLoadingLockedFriends(locked + '/' + loaded);
+                    setLoadingLockedFriends(
+                        `${locked}/${loaded} - ${~~((loaded / friends.length) * 100)}%`
+                    );
                 },
             });
 
             if (lockedFriends?.length) {
                 tableRef.current.setDataSelected(lockedFriends);
-                message.success(
-                    t('Found {{count}} locked friends', { count: lockedFriends.length })
-                );
+                notification.success({
+                    message: t('Success'),
+                    description: t('Found {{count}} locked friends', {
+                        count: lockedFriends.length,
+                    }),
+                    duration: 0,
+                });
             } else {
-                message.success(t('No locked friends found'));
+                notification.info({
+                    message: t('Success'),
+                    description: t('No locked friends found'),
+                });
             }
         } catch (err) {
-            message.error(t('Failed to find locked friends') + ': ' + err.message);
+            notification.error({
+                message: t('Error'),
+                description: t('Failed to find locked friends') + ': ' + err.message,
+                duration: 0,
+            });
+            console.log(err);
         }
         setLoadingLockedFriends(false);
     };
@@ -281,7 +311,7 @@ export default function AllFriends() {
         const listFriendsToCheck = dataSelected?.length ? dataSelected : friends;
 
         const key = 'onClickFindBlockedMessages';
-        message.loading({ key, content: t('Finding blocked messages...') });
+        message.loading({ key, content: t('Finding blocked messages...') }, 0);
 
         const blockedMessages = [];
         for (let i = 0; i < listFriendsToCheck.length; i++) {
@@ -301,15 +331,17 @@ export default function AllFriends() {
         }
         setLoadingBlockedMessages(false);
 
-        if (!blockedMessages.length)
-            message.success({ key, content: t('No blocked messages found') });
-        else {
-            message.success(
-                t('Found {{count}} friends blocking your messages', {
-                    count: blockedMessages.length,
-                })
-            );
-        }
+        const content = blockedMessages.length
+            ? t('Found {{count}} friends blocking your messages', {
+                  count: blockedMessages.length,
+              })
+            : t('No blocked messages found');
+        message.success({ key, content });
+        notification.success({
+            message: t('Success'),
+            description: content,
+            duration: 0,
+        });
     };
 
     const onUploadFriendsFile = async text => {
@@ -319,14 +351,18 @@ export default function AllFriends() {
             const json = JSON.parse(text);
             if (!json?.length) return message.error(t('No data'));
 
+            // TODO validate json data + support import list uid
+            // for (let friend of json) {
+            //     console.log(typeof friend);
+            // }
+            // return;
+
             // check new friends
             const newFriends = [];
             for (let friend of friends) {
                 let foundInFile = json.find(f => f.uid == friend.uid);
                 if (!foundInFile) newFriends.push(friend);
             }
-            updateFriendStatus(newFriends, FRIEND_STATUS.NEW);
-            message.success(t('Found {{count}} new friends', { count: newFriends.length }));
 
             // check unfriended
             const removedFriends = [];
@@ -336,14 +372,25 @@ export default function AllFriends() {
                     removedFriends.push(friend);
                 }
             }
+
+            updateFriendStatus(newFriends, FRIEND_STATUS.NEW);
             updateFriendStatus(removedFriends, FRIEND_STATUS.UNFRIENDED);
-            message.success(t('Found {{count}} unfriended', { count: removedFriends.length }));
+
+            [
+                t('Found {{count}} new friends', { count: newFriends.length }),
+                t('Found {{count}} unfriended', { count: removedFriends.length }),
+            ].forEach(text =>
+                notification.success({
+                    message: t('Success'),
+                    description: text,
+                    duration: 0,
+                })
+            );
 
             // show unfriended / new friends
             if (removedFriends.length || newFriends.length) {
                 tableRef.current.setDataSelected([...removedFriends, ...newFriends]);
             }
-            console.log('set tableRef done');
         } catch (err) {
             message.error(err.message);
         }
@@ -480,8 +527,6 @@ export default function AllFriends() {
     const renderTitle = dataSelected => {
         const _canAddFriend = dataSelected?.filter?.(canAddFriend);
         const _canUnfriend = dataSelected?.filter?.(canUnfriend);
-
-        console.log('renderTitle', _canAddFriend.length, _canUnfriend.length);
         return (
             <>
                 <Button
@@ -536,14 +581,23 @@ export default function AllFriends() {
                                 : t('TIP: You can select friends to check instead of check all')
                         }
                     >
-                        <Button
-                            loading={loadingBlockedMessages}
-                            icon={<i className="fa-solid fa-comment-slash"></i>}
-                            onClick={onClickFindBlockedMessages}
+                        <Popconfirm
+                            title={t('Check who is blocking your messages')}
+                            description={t('Are you sure to check {{count}} friends?', {
+                                count: dataSelected?.length || friendsData.length,
+                            })}
+                            onConfirm={onClickFindBlockedMessages}
+                            okText={t('Yes')}
+                            cancelText={t('No')}
                         >
-                            {t('Blocked messages')}
-                            {loadingBlockedMessages ? ` (${loadingBlockedMessages})` : ''}
-                        </Button>
+                            <Button
+                                loading={loadingBlockedMessages}
+                                icon={<i className="fa-solid fa-comment-slash"></i>}
+                            >
+                                {t('Blocked messages')}
+                                {loadingBlockedMessages ? ` (${loadingBlockedMessages})` : ''}
+                            </Button>
+                        </Popconfirm>
                     </Popover>
 
                     <UploadModal
@@ -556,7 +610,7 @@ export default function AllFriends() {
                             <Popover
                                 title={t('Check who unfriend you')}
                                 content={t(
-                                    'How it work: Export friends data to file then compare it later'
+                                    'How it work: Export friends data to file, then compare it later'
                                 )}
                             >
                                 <Button
