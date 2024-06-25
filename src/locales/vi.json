@@ -52,6 +52,14 @@
         "Unfriend": "Huỷ kết bạn",
         "Unfriend user": "Huỳ kết bạn",
         "Are you sure want to unfriend this user?": "Bạn có chắc muốn huỳ kết bạn người này?",
+        "Unfriended completed {{count}} friends": "Đã huỷ kết bạn {{count}} người",
+
+        "Friend status": "Trạng thái",
+        "Friend": "Bạn bè",
+        "Poked": "Đã chọc",
+        "Locked": "Bị khoá",
+        "Unfriended": "Đã huỷ kết bạn",
+        "Blocked message": "Chặn tin nhắn",
 
         "Locked friends": "Bạn bè bị khoá",
         "Find locked friends": "Lọc bạn bè bị khoá",
@@ -65,6 +73,8 @@
         "TIP: You can select friends to check instead of check all": "TIP: Bạn có thể chọn bạn bè để kiểm tra, thay vì kiểm tra tất cả",
         "Check who (in {{count}} friends selected) is blocking your messages": "Xem ai (trong {{count}} người đang chọn) đang chặn tin nhắn của bạn",
         "Found {{count}} friends blocking your messages": "Tìm thấy {{count}} người đang chặn tin nhắn của bạn",
+        "Finding blocked messages...": "Đang tìm người chặn tin nhắn...",
+        "No blocked messages found": "Không có ai đang chặn tin nhắn của bạn",
 
         "Fetching friends...": "Đang tải danh sách bạn bè...",
         "Unfriend {{count}}": "Huỷ kết bạn {{count}}",
@@ -89,6 +99,7 @@
         "Found {{count}} locked friends": "Tìm thấy {{count}} bè bị khoá",
         "No locked friends found": "Không có bạn bè nào bị khoá",
 
-        "Detect unfriend": "Ai huỷ kết bạn"
+        "Detect unfriend": "Ai huỷ kết bạn",
+        "Check who unfriend you": "Kiểm tra ai đã huỷ kết bạn với bạn"
     }
 }

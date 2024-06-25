@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     App,
     Avatar,
@@ -26,22 +26,41 @@ import MyTable from '../../components/MyTable';
 import fileDownload from 'js-file-download';
 import { objectToCsv, sleep } from '../../utils/helper';
 import dayjs from 'dayjs';
+import { produce } from 'immer';
+import useStateStore from '../../hooks/useStateStore';
 
 const { Title } = Typography;
+
+const FRIEND_STATUS = {
+    POKED: 'Poked',
+    LOCKED: 'Locked',
+    UNFRIENDED: 'Unfriended',
+    BLOCKED_MESSAGE: 'Blocked message',
+};
+
+const FRIEND_STATUS_COLOR = {
+    [FRIEND_STATUS.POKED]: 'green',
+    [FRIEND_STATUS.LOCKED]: 'orange',
+    [FRIEND_STATUS.UNFRIENDED]: 'red',
+    [FRIEND_STATUS.BLOCKED_MESSAGE]: 'red',
+};
 
 export default function AllFriends() {
     const { message } = App.useApp();
     const { t } = useTranslation();
 
     const profile = useStore(selectors.profile);
-    const friends = useStore(selectors.friends);
-    const setFriends = useStore(selectors.setFriends);
+    const [friends, setFriends] = useStateStore(selectors.friends, selectors.setFriends);
 
-    const friendsData = friends.map((f, i) => ({
-        ...f,
-        recent: i,
-        url: getFbUrlFromId(f.uid),
-    }));
+    const friendsData = useMemo(
+        () =>
+            friends?.map((f, i) => ({
+                ...f,
+                recent: i,
+                url: getFbUrlFromId(f.uid),
+            })) || [],
+        [friends]
+    );
 
     const [loading, setLoading] = useState(false);
     const [loadingLockedFriends, setLoadingLockedFriends] = useState(0);
@@ -51,6 +70,27 @@ export default function AllFriends() {
     useEffect(() => {
         if (profile?.uid && !friends?.length) onClickReload();
     }, []);
+
+    const updateFriendStatus = (friend, status, override = false, insertAtStart = false) => {
+        setFriends(preFriends => {
+            const newFriends = produce(preFriends, draft => {
+                let found = draft.find(f => f.uid == friend.uid);
+                if (found) {
+                    if (!found.statuses) found.statuses = [];
+                    if (!override && !found.statuses.includes(status)) found.statuses.push(status);
+                    else {
+                        if (!Array.isArray(status)) status = [status];
+                        found.statuses = status;
+                    }
+                } else {
+                    if (insertAtStart) draft.unshift({ ...friend, statuses: [status] });
+                    else draft.push({ ...friend, statuses: [status] });
+                }
+                return draft;
+            });
+            return newFriends;
+        });
+    };
 
     const onClickReload = () => {
         if (loading) return;
@@ -82,17 +122,6 @@ export default function AllFriends() {
         else message.error(t('Unsupported file type'));
     };
 
-    const onClickUnfriendSelected = async selectedData => {
-        const removedUid = new Set();
-        for (let record of selectedData) {
-            const success = await onClickUnfriendOne(record);
-            if (success) removedUid.add(record.uid);
-            await sleep(500);
-        }
-        // TODO: check why state not update correctly inside for-loop?
-        setFriends(friends.filter(f => !removedUid.has(f.uid)));
-    };
-
     const onClickUnfriendOne = async record => {
         const key = 'onClickUnfriendOne' + record.uid;
         try {
@@ -100,12 +129,40 @@ export default function AllFriends() {
             await unfriend({ myUid: profile?.uid, targetUid: record.uid });
             message.success({ key, content: t('Unfriend completed') + ': ' + record.name });
 
-            setFriends(friends.filter(f => f.uid != record.uid));
+            updateFriendStatus(record, FRIEND_STATUS.UNFRIENDED);
             return true;
         } catch (err) {
             message.error({
                 key,
                 content: t('Failed to unfriend') + ': ' + record.name + ': ' + err.message,
+            });
+            console.log(err);
+            return false;
+        }
+    };
+
+    const onClickUnfriendSelected = async selectedData => {
+        const removedUid = new Set();
+        for (let record of selectedData) {
+            const success = await onClickUnfriendOne(record);
+            if (success) removedUid.add(record.uid);
+            await sleep(500);
+        }
+        message.success(t('Unfriended completed {{count}} friends', { count: removedUid.size }));
+    };
+
+    const onClickPokeFriend = async record => {
+        const key = 'onClickPokeFriend' + record.uid;
+        try {
+            message.loading({ key, content: t('Poking...') + ' ' + record.name });
+            await pokeFriend({ myUid: profile?.uid, targetUid: record.uid });
+            message.success({ key, content: t('Poke completed') + ': ' + record.name });
+            updateFriendStatus(record, FRIEND_STATUS.POKED);
+            return true;
+        } catch (err) {
+            message.error({
+                key,
+                content: t('Failed to poke') + ': ' + record.name + ': ' + err.message,
             });
             console.log(err);
             return false;
@@ -122,23 +179,6 @@ export default function AllFriends() {
         message.success(t('Poke completed {{count}} friends', { count: pokedUid.size }));
     };
 
-    const onClickPokeFriend = async record => {
-        const key = 'onClickPokeFriend' + record.uid;
-        try {
-            message.loading({ key, content: t('Poking...') + ' ' + record.name });
-            await pokeFriend({ myUid: profile?.uid, targetUid: record.uid });
-            message.success({ key, content: t('Poke completed') + ': ' + record.name });
-            return true;
-        } catch (err) {
-            message.error({
-                key,
-                content: t('Failed to poke') + ': ' + record.name + ': ' + err.message,
-            });
-            console.log(err);
-            return false;
-        }
-    };
-
     const onClickFindLockedFriends = async () => {
         if (loadingLockedFriends) return;
 
@@ -146,7 +186,6 @@ export default function AllFriends() {
 
         setLoadingLockedFriends(1);
         message.loading(t('Finding locked friends...'));
-        const tempFriends = [...friends];
 
         try {
             const lockedFriends = await getAllLockedFriends({
@@ -160,7 +199,7 @@ export default function AllFriends() {
                             lockedUsers.length +
                             ')'
                     );
-                    setFriends([user, ...tempFriends]);
+                    updateFriendStatus(user, FRIEND_STATUS.LOCKED);
                 },
                 onPage: (pageNum, loaded, locked) => {
                     setLoadingLockedFriends(locked + '/' + loaded);
@@ -168,7 +207,6 @@ export default function AllFriends() {
             });
 
             if (lockedFriends?.length) {
-                setFriends(lockedFriends.concat(friends));
                 tableRef.current.setDataSelected(lockedFriends);
                 message.success(
                     t('Found {{count}} locked friends', { count: lockedFriends.length })
@@ -221,6 +259,8 @@ export default function AllFriends() {
         }
     };
 
+    const onClickDetectUnfriend = async () => {};
+
     const columns = [
         {
             title: '#',
@@ -252,6 +292,31 @@ export default function AllFriends() {
                 );
             },
             width: 'auto',
+        },
+        {
+            title: t('Friend status'),
+            dataIndex: 'status',
+            key: 'status',
+            sorter: (a, b) => a.status - b.status,
+            width: 150,
+            filters: Object.entries(FRIEND_STATUS).map(([key, value]) => ({
+                text: t(value),
+                value,
+            })),
+            onFilter: (value, record) => record.statuses?.includes(value),
+            render: (text, record, index) => {
+                if (!record?.statuses?.length) return t('Friend');
+                return record.statuses
+                    .map(status => ({
+                        key: status,
+                        value: t(status),
+                    }))
+                    .map(({ key, value }) => (
+                        <Tag key={key} color={FRIEND_STATUS_COLOR[key]}>
+                            {value}
+                        </Tag>
+                    ));
+            },
         },
         {
             title: 'Uid',
@@ -291,7 +356,7 @@ export default function AllFriends() {
                             <Button
                                 danger
                                 type="primary"
-                                icon={<i className="fa-solid fa-trash"></i>}
+                                icon={<i className="fa-solid fa-trash-can"></i>}
                             ></Button>
                         </Popconfirm>
                     </Tooltip>
@@ -322,7 +387,6 @@ export default function AllFriends() {
                 <Space.Compact>
                     <Tooltip title={t('Find locked friends')}>
                         <Button
-                            type="primary"
                             loading={loadingLockedFriends}
                             icon={<i className="fa-solid fa-lock"></i>}
                             onClick={onClickFindLockedFriends}
@@ -347,13 +411,22 @@ export default function AllFriends() {
                         }
                     >
                         <Button
-                            type="primary"
                             loading={loadingBlockedMessages}
                             icon={<i className="fa-solid fa-comment-slash"></i>}
                             onClick={onClickFindBlockedMessages}
                         >
                             {t('Blocked messages') +
                                 (loadingBlockedMessages ? ` (${loadingBlockedMessages})` : '')}
+                        </Button>
+                    </Tooltip>
+
+                    <Tooltip title={t('Check who unfriend you')}>
+                        <Button
+                            // loading={loadingLockedFriends}
+                            icon={<i className="fa-solid fa-user-large-slash"></i>}
+                            onClick={onClickDetectUnfriend}
+                        >
+                            {t('Detect unfriend')}
                         </Button>
                     </Tooltip>
                 </Space.Compact>

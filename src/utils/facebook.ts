@@ -388,7 +388,7 @@ export async function getAllLockedFriends({ myUid, onFound, onPage }) {
         const { edges, page_info } = res.data.node.pageItems;
 
         for (let item of edges) {
-            if (!item?.node?.subtitle_text) {
+            if (!item?.node?.subtitle_text || Math.random() < 0.1) {
                 const user = {
                     uid: item.node.node.id,
                     url: item.node.url,
