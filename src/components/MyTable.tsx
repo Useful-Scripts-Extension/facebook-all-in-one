@@ -34,13 +34,15 @@ const MyTable = forwardRef((props: Readonly<{
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
 
   useImperativeHandle(ref, () => ({
+    getDataSelected: () => dataSelected,
     setDataSelected,
+    hasDataSelected: () => !!dataSelected?.length,
     setShowSelectedOnly,
     setSearch,
-    clearFilter: () => {
-      setSearch("")
-      setDataSelected([])
-      setShowSelectedOnly(false)
+    clearFilter: ({ search = true, dataSelected = true, showSelectedOnly = true } = {}) => {
+      search && setSearch("")
+      dataSelected && setDataSelected([])
+      showSelectedOnly && setShowSelectedOnly(false)
     }
   }));
 
@@ -113,7 +115,8 @@ const MyTable = forwardRef((props: Readonly<{
         {
           key: "unselect_all",
           text: t("Unselect all"),
-          onSelect: () =>
+          onSelect: () => {
+            setShowSelectedOnly(false)
             setDataSelected(
               dataSelected.filter(
                 (_) =>
@@ -121,7 +124,8 @@ const MyTable = forwardRef((props: Readonly<{
                     (a) => keyExtractor(a) === keyExtractor(_)
                   )
               )
-            ),
+            )
+          },
         },
       ],
     }
@@ -129,7 +133,10 @@ const MyTable = forwardRef((props: Readonly<{
       res.selections.push({
         key: "show_selected_only",
         text: showSelectedOnly ? t("Show all") : t("Show selected only"),
-        onSelect: () => setShowSelectedOnly(!showSelectedOnly),
+        onSelect: () => {
+          setSearch('')
+          setShowSelectedOnly(!showSelectedOnly)
+        },
       })
     }
     return res;

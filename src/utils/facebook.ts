@@ -295,6 +295,13 @@ export async function getMessagesAtTimeCursor({
     return [];
 }
 
+export async function checkCanMessage(targetUid) {
+    const res = await getEntityInfoFromId(targetUid);
+    return res?.data?.node?.comet_hovercard_renderer?.user?.primaryActions?.find(
+        _ => _?.profile_action_type == 'MESSAGE'
+    );
+}
+
 // #endregion
 
 // #region friends

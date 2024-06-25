@@ -53,10 +53,18 @@
         "Unfriend user": "Huỳ kết bạn",
         "Are you sure want to unfriend this user?": "Bạn có chắc muốn huỳ kết bạn người này?",
 
+        "Locked friends": "Bạn bè bị khoá",
         "Find locked friends": "Lọc bạn bè bị khoá",
         "Finding locked friends...": "Đang tìm bạn bè bị khoá",
         "Found locked friend": "Tìm thấy bạn bè bị khoá",
         "Failed to find locked friends": "Lỗi khi tìm bạn bè bị khoá",
+
+        "Found": "Tìm thấy",
+        "Blocked messages": "Bị chặn tin nhắn",
+        "Check who is blocking your messages": "Xem ai đang chặn tin nhắn của bạn",
+        "TIP: You can select friends to check instead of check all": "TIP: Bạn có thể chọn bạn bè để kiểm tra, thay vì kiểm tra tất cả",
+        "Check who (in {{count}} friends selected) is blocking your messages": "Xem ai (trong {{count}} người đang chọn) đang chặn tin nhắn của bạn",
+        "Found {{count}} friends blocking your messages": "Tìm thấy {{count}} người đang chặn tin nhắn của bạn",
 
         "Fetching friends...": "Đang tải danh sách bạn bè...",
         "Unfriend {{count}}": "Huỷ kết bạn {{count}}",

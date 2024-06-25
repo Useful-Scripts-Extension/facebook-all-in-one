@@ -15,6 +15,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import useStore, { selectors } from '../../store';
 import {
+    checkCanMessage,
     getAllFriends,
     getAllLockedFriends,
     getFbUrlFromId,
@@ -44,6 +45,7 @@ export default function AllFriends() {
 
     const [loading, setLoading] = useState(false);
     const [loadingLockedFriends, setLoadingLockedFriends] = useState(0);
+    const [loadingBlockedMessages, setLoadingBlockedMessages] = useState(0);
     const tableRef = useRef(null);
 
     useEffect(() => {
@@ -180,6 +182,45 @@ export default function AllFriends() {
         setLoadingLockedFriends(false);
     };
 
+    const onClickFindBlockedMessages = async () => {
+        if (loadingBlockedMessages) return;
+        setLoadingBlockedMessages(true);
+
+        const dataSelected = tableRef.current.getDataSelected();
+
+        const listFriendsToCheck = dataSelected?.length ? dataSelected : friends;
+
+        const key = 'onClickFindBlockedMessages';
+        message.loading({ key, content: t('Finding blocked messages...') });
+
+        const blockedMessages = [];
+        for (let i = 0; i < listFriendsToCheck.length; i++) {
+            const friend = listFriendsToCheck[i];
+            setLoadingBlockedMessages(
+                `${blockedMessages.length}/${i + 1} - ${~~((i / listFriendsToCheck.length) * 100)}%`
+            );
+            if (!(await checkCanMessage(friend.uid))) {
+                blockedMessages.push(friend);
+                tableRef.current.setDataSelected(blockedMessages);
+                message.success({
+                    key,
+                    content: t('Found') + ' ' + friend.name + ' (' + blockedMessages.length + ')',
+                });
+            }
+        }
+        setLoadingBlockedMessages(false);
+
+        if (!blockedMessages.length)
+            message.success({ key, content: t('No blocked messages found') });
+        else {
+            message.success(
+                t('Found {{count}} friends blocking your messages', {
+                    count: blockedMessages.length,
+                })
+            );
+        }
+    };
+
     const columns = [
         {
             title: '#',
@@ -278,15 +319,44 @@ export default function AllFriends() {
                     {t('Reload')}
                 </Button>
 
-                <Button
-                    type="primary"
-                    loading={loadingLockedFriends}
-                    icon={loadingLockedFriends ? null : <i className="fa-solid fa-lock"></i>}
-                    onClick={onClickFindLockedFriends}
-                >
-                    {t('Find locked friends') +
-                        (loadingLockedFriends ? ` (${loadingLockedFriends})` : '')}
-                </Button>
+                <Space.Compact>
+                    <Tooltip title={t('Find locked friends')}>
+                        <Button
+                            type="primary"
+                            loading={loadingLockedFriends}
+                            icon={<i className="fa-solid fa-lock"></i>}
+                            onClick={onClickFindLockedFriends}
+                        >
+                            {t('Locked friends') +
+                                (loadingLockedFriends ? ` (${loadingLockedFriends})` : '')}
+                        </Button>
+                    </Tooltip>
+
+                    <Tooltip
+                        title={
+                            dataSelected?.length
+                                ? t(
+                                      'Check who (in {{count}} friends selected) is blocking your messages',
+                                      {
+                                          count: dataSelected?.length,
+                                      }
+                                  )
+                                : t('Check who is blocking your messages') +
+                                  '\n' +
+                                  t('TIP: You can select friends to check instead of check all')
+                        }
+                    >
+                        <Button
+                            type="primary"
+                            loading={loadingBlockedMessages}
+                            icon={<i className="fa-solid fa-comment-slash"></i>}
+                            onClick={onClickFindBlockedMessages}
+                        >
+                            {t('Blocked messages') +
+                                (loadingBlockedMessages ? ` (${loadingBlockedMessages})` : '')}
+                        </Button>
+                    </Tooltip>
+                </Space.Compact>
 
                 <Dropdown
                     menu={{
@@ -305,7 +375,7 @@ export default function AllFriends() {
                 </Dropdown>
 
                 {dataSelected?.length ? (
-                    <>
+                    <Space.Compact>
                         <Popconfirm
                             title={t('Poke {{count}} friends', { count: dataSelected.length })}
                             description={t('Are you sure to poke these friends?')}
@@ -336,14 +406,14 @@ export default function AllFriends() {
                                     (dataSelected.length ? ' ' + dataSelected.length : '')}
                             </Button>
                         </Popconfirm>
-                    </>
+                    </Space.Compact>
                 ) : null}
 
-                {dataSelected.length ? (
+                {/* {dataSelected.length ? (
                     <Tag color="processing" style={{ marginLeft: '10px', fontWeight: 'bold' }}>
                         {t('Selected {{count}} friends', { count: dataSelected.length })}
                     </Tag>
-                ) : null}
+                ) : null} */}
             </>
         );
     };
