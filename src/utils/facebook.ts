@@ -35,7 +35,7 @@ export function getUserAvatarFromUid(uid: string, size = 500) {
     return `https://graph.facebook.com/${uid}/picture?height=${size}&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
 }
 
-export async function getEntityInfoFromId(entityID: string, context = 'DEFAULT') {
+export async function getHoverCard(entityID: string, context = 'DEFAULT') {
     let res = await fetchGraphQl({
         fb_api_req_friendly_name: 'CometHovercardQueryRendererQuery',
         variables: {
@@ -296,7 +296,7 @@ export async function getMessagesAtTimeCursor({
 }
 
 export async function checkCanMessage(targetUid) {
-    const res = await getEntityInfoFromId(targetUid);
+    const res = await getHoverCard(targetUid);
     return res?.data?.node?.comet_hovercard_renderer?.user?.primaryActions?.find(
         _ => _?.profile_action_type == 'MESSAGE'
     );
@@ -361,6 +361,8 @@ export async function pokeFriend({ myUid, targetUid }) {
     });
     const json = JSON.parse(res || '{}');
     if (json.errors?.length) throw new Error(json.errors[0].message);
+    if (json?.data?.user_poke?.user?.poke_status != 'PENDING')
+        throw new Error('Failed to poke friend: ' + json?.data?.user_poke?.user?.poke_status);
     return json;
 }
 

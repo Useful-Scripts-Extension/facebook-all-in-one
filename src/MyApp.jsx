@@ -13,7 +13,6 @@ const { Header, Sider, Content, Footer } = Layout;
 const AllMessages = React.lazy(() => import('./screens/Messages/AllMessages'));
 const FirstMessages = React.lazy(() => import('./screens/Messages/FirstMessages'));
 const AllFriends = React.lazy(() => import('./screens/Friends/AllFriends'));
-const DetectUnfriend = React.lazy(() => import('./screens/Friends/DetectUnfriend'));
 
 function convertMenuItemToAntd(items) {
     return items.map(item => {
@@ -103,12 +102,6 @@ export default function MyApp() {
                     icon: <i className="fa-solid fa-users"></i>,
                     path: '/friends/all',
                     element: <AllFriends />,
-                },
-                {
-                    label: t('Detect unfriend'),
-                    icon: <i className="fa-solid fa-user-slash"></i>,
-                    path: '/friends/detect-unfriend',
-                    element: <DetectUnfriend />,
                 },
                 {
                     label: t('Friend requests'),

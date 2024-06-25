@@ -40,6 +40,7 @@
         "Failed to fetch": "Tải thất bại",
         "Fetch completed": "Tải hoàn tất",
         "No data to export": "Không có dữ liệu để xuất",
+        "No data to import": "Không có dữ liệu để nhập",
         "Unsupported file type": "Định dạng tập tin không được hỗ trợ",
 
         "Show all": "Hiển thị tất cả",
@@ -60,6 +61,7 @@
         "Locked": "Bị khoá",
         "Unfriended": "Đã huỷ kết bạn",
         "Blocked message": "Chặn tin nhắn",
+        "New friend": "Bạn mới",
 
         "Locked friends": "Bạn bè bị khoá",
         "Find locked friends": "Lọc bạn bè bị khoá",
@@ -100,6 +102,12 @@
         "No locked friends found": "Không có bạn bè nào bị khoá",
 
         "Detect unfriend": "Ai huỷ kết bạn",
-        "Check who unfriend you": "Kiểm tra ai đã huỷ kết bạn với bạn"
+        "Check who unfriend you": "Kiểm tra ai đã huỷ kết bạn với bạn",
+        "Upload friends file": "Tải lên file bạn bè",
+        "Click or drag file to this area to upload": "Click hoặc kéo thả file vào đây",
+        "Support only .json backup file": "Chỉ hỗ trợ file .json được xuất từ trang này",
+        "Found {{count}} new friends": "Tìm thấy {{count}} bạn mới",
+        "Found {{count}} unfriended": "Tìm thấy {{count}} người huỷ kết bạn",
+        "File empty": "File không có dữ liệu"
     }
 }

@@ -28,6 +28,7 @@ import { objectToCsv, sleep } from '../../utils/helper';
 import dayjs from 'dayjs';
 import { produce } from 'immer';
 import useStateStore from '../../hooks/useStateStore';
+import UploadModal from '../../components/UploadModal';
 
 const { Title } = Typography;
 
@@ -36,6 +37,7 @@ const FRIEND_STATUS = {
     LOCKED: 'Locked',
     UNFRIENDED: 'Unfriended',
     BLOCKED_MESSAGE: 'Blocked message',
+    NEW: 'New friend',
 };
 
 const FRIEND_STATUS_COLOR = {
@@ -43,6 +45,7 @@ const FRIEND_STATUS_COLOR = {
     [FRIEND_STATUS.LOCKED]: 'orange',
     [FRIEND_STATUS.UNFRIENDED]: 'red',
     [FRIEND_STATUS.BLOCKED_MESSAGE]: 'red',
+    [FRIEND_STATUS.NEW]: 'blue',
 };
 
 export default function AllFriends() {
@@ -259,7 +262,42 @@ export default function AllFriends() {
         }
     };
 
-    const onClickDetectUnfriend = async () => {};
+    const onUploadFriendsFile = async text => {
+        if (!text) return message.error(t('File empty'));
+
+        try {
+            const json = JSON.parse(text);
+            if (!json?.length) return message.error(t('No data'));
+
+            // check new friends
+            const newFriends = [];
+            for (let friend of friends) {
+                let foundInFile = json.find(f => f.uid == friend.uid);
+                if (!foundInFile) newFriends.push(friend);
+            }
+            newFriends.forEach(f => updateFriendStatus(f, FRIEND_STATUS.NEW));
+            message.success(t('Found {{count}} new friends', { count: newFriends.length }));
+
+            // check unfriended
+            const removedFriends = [];
+            for (let friend of json) {
+                let foundInCurrent = friends.find(f => f.uid == friend.uid);
+                if (!foundInCurrent) {
+                    removedFriends.push(friend);
+                }
+            }
+            removedFriends.forEach(f => updateFriendStatus(f, FRIEND_STATUS.UNFRIENDED));
+            message.success(t('Found {{count}} unfriended', { count: removedFriends.length }));
+
+            // show unfriended
+            if (removedFriends.length) {
+                tableRef.current.setDataSelected(removedFriends);
+                tableRef.current.setShowSelectedOnly(true);
+            }
+        } catch (err) {
+            message.error(err.message);
+        }
+    };
 
     const columns = [
         {
@@ -421,13 +459,22 @@ export default function AllFriends() {
                     </Tooltip>
 
                     <Tooltip title={t('Check who unfriend you')}>
-                        <Button
-                            // loading={loadingLockedFriends}
-                            icon={<i className="fa-solid fa-user-large-slash"></i>}
-                            onClick={onClickDetectUnfriend}
-                        >
-                            {t('Detect unfriend')}
-                        </Button>
+                        <UploadModal
+                            accept=".json"
+                            title={t('Upload friends file')}
+                            text={t('Click or drag file to this area to upload')}
+                            hint={t('Support only .json backup file')}
+                            onSubmit={onUploadFriendsFile}
+                            renderButton={({ showModal }) => (
+                                <Button
+                                    // loading={loadingLockedFriends}
+                                    icon={<i className="fa-solid fa-user-large-slash"></i>}
+                                    onClick={showModal}
+                                >
+                                    {t('Detect unfriend')}
+                                </Button>
+                            )}
+                        />
                     </Tooltip>
                 </Space.Compact>
 

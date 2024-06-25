@@ -40,6 +40,7 @@
         "Failed to fetch": "Failed to fetch",
         "Fetch completed": "Fetch completed",
         "No data to export": "No data to export",
+        "No data to import": "No data to import",
         "Unsupported file type": "Unsupported file type",
 
         "Show all": "Show all",
@@ -52,11 +53,30 @@
         "Unfriend": "Unfriend",
         "Unfriend user": "Unfriend user",
         "Are you sure want to unfriend this user?": "Are you sure want to unfriend this user?",
+        "Unfriended completed {{count}} friends": "Unfriended completed {{count}} friends",
 
+        "Friend status": "Friend status",
+        "Friend": "Friend",
+        "Poked": "Poked",
+        "Locked": "Locked",
+        "Unfriended": "Unfriended",
+        "Blocked message": "Blocked message",
+        "New friend": "New friend",
+
+        "Locked friends": "Locked friends",
         "Find locked friends": "Find locked friends",
         "Finding locked friends...": "Finding locked friends...",
         "Found locked friend": "Found locked friend",
         "Failed to find locked friends": "Failed to find locked friends",
+
+        "Found": "Found",
+        "Blocked messages": "Blocked messages",
+        "Check who is blocking your messages": "Check who is blocking your messages",
+        "TIP: You can select friends to check instead of check all": "TIP: You can select friends to check instead of check all",
+        "Check who (in {{count}} friends selected) is blocking your messages": "Check who (in {{count}} friends selected) is blocking your messages",
+        "Found {{count}} friends blocking your messages": "Found {{count}} friends blocking your messages",
+        "Finding blocked messages...": "Finding blocked messages...",
+        "No blocked messages found": "No blocked messages found",
 
         "Fetching friends...": "Fetching friends...",
         "Unfriend {{count}}": "Unfriend {{count}}",
@@ -81,6 +101,10 @@
         "Found {{count}} locked friends": "Found {{count}} locked friends",
         "No locked friends found": "No locked friends found",
 
-        "Detect unfriend": "Detect unfriendn"
+        "Detect unfriend": "Detect unfriend",
+        "Check who unfriend you": "Check who unfriend you",
+        "Found {{count}} new friends": "Found {{count}} new friends",
+        "Found {{count}} unfriended": "Found {{count}} unfriended",
+        "File empty": "File emptyu"
     }
 }
