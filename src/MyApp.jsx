@@ -2,12 +2,17 @@ import React, { useEffect } from 'react';
 import { App, Layout, Menu, Space } from 'antd';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LanguagePicker, LoadingFullScreen, ProfileHeader, ThemeSwitcher } from './components';
 import useStore, { selectors } from './store';
-import logo from './assets/logo.png';
 import { connectExtension } from './utils/extesion';
 import { getUserInfoFromUid } from './utils/facebook';
-import ComingSoon from './components/ComingSoon';
+import logo from './assets/logo.png';
+import {
+    LanguagePicker,
+    LoadingFullScreen,
+    ProfileHeader,
+    ThemeSwitcher,
+    ComingSoon,
+} from './components';
 
 const { Header, Sider, Content, Footer } = Layout;
 
