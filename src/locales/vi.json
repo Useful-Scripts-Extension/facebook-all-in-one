@@ -122,6 +122,8 @@
 
         "Success": "Thành công",
         "Warning": "Cảnh báo",
-        "Error": "Lỗi"
+        "Error": "Lỗi",
+
+        "Coming Soon": "Đang phát triển"
     }
 }

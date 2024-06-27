@@ -7,6 +7,7 @@ import useStore, { selectors } from './store';
 import logo from './assets/logo.png';
 import { connectExtension } from './utils/extesion';
 import { getUserInfoFromUid } from './utils/facebook';
+import ComingSoon from './components/ComingSoon';
 
 const { Header, Sider, Content, Footer } = Layout;
 
@@ -41,10 +42,6 @@ function convertMenuItemToRoute(items) {
     return routes;
 }
 
-function PlaceHolder({ name }) {
-    return <div>{name}</div>;
-}
-
 export default function MyApp() {
     const { message } = App.useApp();
     const { t } = useTranslation();
@@ -72,7 +69,7 @@ export default function MyApp() {
             label: t('Dashboard'),
             icon: <i className="fa-solid fa-house"></i>,
             path: '/',
-            element: <PlaceHolder name="Dashboard" />,
+            element: <ComingSoon name="Dashboard" />,
         },
         {
             label: t('Messages'),
@@ -106,13 +103,13 @@ export default function MyApp() {
                     label: t('Friend requests'),
                     icon: <i className="fa-solid fa-user-plus"></i>,
                     path: '/friends/requests',
-                    element: <PlaceHolder name="Friend requests" />,
+                    element: <ComingSoon name="Friend requests" />,
                 },
                 {
                     label: t('Follow'),
                     icon: <i className="fa-solid fa-person-walking-arrow-right"></i>,
                     path: '/friends/follow',
-                    element: <PlaceHolder name="Followings / Followers" />,
+                    element: <ComingSoon name="Followings / Followers" />,
                 },
             ],
         },
@@ -120,13 +117,13 @@ export default function MyApp() {
             label: t('Groups'),
             icon: <i className="fa-solid fa-users-line"></i>,
             path: '/groups',
-            element: <PlaceHolder name="Groups" />,
+            element: <ComingSoon name="Groups" />,
         },
         {
             label: t('Pages'),
             icon: <i className="fa-solid fa-flag"></i>,
             path: '/pages',
-            element: <PlaceHolder name="Pages" />,
+            element: <ComingSoon name="Pages" />,
         },
     ];
 

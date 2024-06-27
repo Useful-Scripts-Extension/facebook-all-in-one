@@ -105,6 +105,8 @@
         "Check who unfriend you": "Check who unfriend you",
         "Found {{count}} new friends": "Found {{count}} new friends",
         "Found {{count}} unfriended": "Found {{count}} unfriended",
-        "File empty": "File emptyu"
+        "File empty": "File emptyu",
+
+        "Coming Soon": "Coming Soon"
     }
 }
