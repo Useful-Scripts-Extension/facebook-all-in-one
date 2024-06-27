@@ -3,7 +3,7 @@ import { App, Layout, Menu, Space } from 'antd';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import useStore, { selectors } from './store';
-import { connectExtension } from './utils/extesion';
+import { connectExtension, fetchExtension } from './utils/extesion';
 import { getUserInfoFromUid } from './utils/facebook';
 import logo from './assets/logo.png';
 import {
@@ -57,16 +57,16 @@ export default function MyApp() {
     const setProfile = useStore(selectors.setProfile);
 
     useEffect(() => {
-        connectExtension()
-            .then(data => {
-                console.log(data);
-                getUserInfoFromUid(data.uid).then(info => {
-                    setProfile(info);
-                });
-            })
-            .catch(e => {
-                message.error(e.message);
-            });
+        // connectExtension()
+        //     .then(data => {
+        //         console.log(data);
+        //         getUserInfoFromUid(data.uid).then(info => {
+        //             setProfile(info);
+        //         });
+        //     })
+        //     .catch(e => {
+        //         message.error(e.message);
+        //     });
     }, [setProfile, message]);
 
     const menuItems = [

@@ -1,7 +1,22 @@
 import lodash_get from 'lodash/get';
-import { fetchExtension, sendMessage } from './extesion';
+import { fetchExtension } from './extesion';
+import useStore, { selectors } from '../store';
 
 // #region helper
+
+export function fetchGraphQl(params: object | string = {}, url: string = ''): Promise<any> {
+    let query = '';
+    if (typeof params === 'string') query = '&q=' + encodeURIComponent(params);
+    else query = wrapGraphQlParams(params);
+
+    return fetchExtension(url || 'https://www.facebook.com/api/graphql/', {
+        body: query + '&fb_dtsg=' + selectors.profile(useStore.getState())?.fb_dtsg,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        credentials: 'include',
+    });
+}
+
 export function wrapGraphQlParams(params = {}) {
     const formBody = [];
     for (const property in params) {
@@ -16,17 +31,16 @@ export function wrapGraphQlParams(params = {}) {
     return formBody.join('&');
 }
 
-export function fetchGraphQl(params: object | string = {}, url: string = ''): Promise<any> {
-    let query = '';
-    if (typeof params === 'string') query = '&q=' + encodeURIComponent(params);
-    else query = wrapGraphQlParams(params);
+// #endregion
 
-    return sendMessage({
-        action: 'request_graphql',
-        query,
-        url,
-    });
+// #region
+
+export function getAccessToken() {
+    return fetchExtension('https://business.facebook.com/business_locations')
+        .then(htmlText => RegExp(/(EAAG\w+)/).exec(htmlText)?.[1])
+        .catch(e => alert('Error: ' + e));
 }
+
 // #endregion
 
 // #region user

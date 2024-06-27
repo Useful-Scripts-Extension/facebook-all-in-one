@@ -4,12 +4,12 @@ export function connectExtension() {
     return sendMessage({ action: 'fb_allInOne_init' });
 }
 
+export function runBgFunc(fnPath, params) {
+    return sendMessage({ action: 'fb_allInOne_runFunc', fnPath, params });
+}
+
 export function fetchExtension(url, options) {
-    return sendMessage({
-        action: 'fetch',
-        url,
-        options,
-    });
+    return runBgFunc('fetch', { url, options });
 }
 
 export function sendMessage(data) {
