@@ -3,8 +3,7 @@ import { App, Layout, Menu, Space } from 'antd';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import useStore, { selectors } from './store';
-import { connectExtension, fetchExtension } from './utils/extesion';
-import { getUserInfoFromUid } from './utils/facebook';
+import { getFbDtsg, getMyUid, getUserInfoFromUid } from './utils/facebook';
 import logo from './assets/logo.png';
 import {
     LanguagePicker,
@@ -48,7 +47,7 @@ function convertMenuItemToRoute(items) {
 }
 
 export default function MyApp() {
-    const { message } = App.useApp();
+    const { message, notification } = App.useApp();
     const { t } = useTranslation();
     const location = useLocation();
     const hydrated = useStore(selectors.hydrated);
@@ -56,18 +55,26 @@ export default function MyApp() {
     const profile = useStore(selectors.profile);
     const setProfile = useStore(selectors.setProfile);
 
+    console.log(profile);
+
     useEffect(() => {
-        // connectExtension()
-        //     .then(data => {
-        //         console.log(data);
-        //         getUserInfoFromUid(data.uid).then(info => {
-        //             setProfile(info);
-        //         });
-        //     })
-        //     .catch(e => {
-        //         message.error(e.message);
-        //     });
-    }, [setProfile, message]);
+        (async () => {
+            try {
+                const uid = await getMyUid();
+                const profileInfo = await getUserInfoFromUid(uid);
+                if (!profileInfo) throw new Error('Server reponse empty');
+                profileInfo.fb_dtsg = await getFbDtsg();
+                setProfile(profileInfo);
+                console.log(profileInfo);
+            } catch (err) {
+                notification.error({
+                    message: t('Error'),
+                    description: t('Failed to get your profile data') + ': ' + err.message,
+                    duration: 0,
+                });
+            }
+        })();
+    }, []);
 
     const menuItems = [
         {

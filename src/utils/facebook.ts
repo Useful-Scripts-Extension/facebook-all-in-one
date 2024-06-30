@@ -1,5 +1,5 @@
 import lodash_get from 'lodash/get';
-import { fetchExtension } from './extesion';
+import { fetchExtension, runExtFunc } from './extesion';
 import useStore, { selectors } from '../store';
 
 // #region helper
@@ -33,7 +33,23 @@ export function wrapGraphQlParams(params = {}) {
 
 // #endregion
 
-// #region
+// #region access token
+
+export async function getFbDtsg() {
+    let text = await fetchExtension('https://mbasic.facebook.com/photos/upload/');
+    let dtsg = RegExp(/name="fb_dtsg" value="(.*?)"/).exec(text)?.[1];
+    if (!dtsg) {
+        text = await fetchExtension('https://m.facebook.com/home.php', {
+            headers: {
+                Accept: 'text/html',
+            },
+        });
+        dtsg =
+            RegExp(/"dtsg":{"token":"([^"]+)"/).exec(text)?.[1] ||
+            RegExp(/"name":"fb_dtsg","value":"([^"]+)/).exec(text)?.[1];
+    }
+    return dtsg;
+}
 
 export function getAccessToken() {
     return fetchExtension('https://business.facebook.com/business_locations')
@@ -44,6 +60,13 @@ export function getAccessToken() {
 // #endregion
 
 // #region user
+
+export async function getMyUid() {
+    const d = await runExtFunc('chrome.cookies.get', [
+        { url: 'https://www.facebook.com', name: 'c_user' },
+    ]);
+    return d?.value;
+}
 
 export function getUserAvatarFromUid(uid: string, size = 500) {
     return `https://graph.facebook.com/${uid}/picture?height=${size}&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;

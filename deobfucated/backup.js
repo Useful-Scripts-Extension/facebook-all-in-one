@@ -311,3 +311,42 @@ let getHomeStories = {
         id: '100004848287494',
     },
 };
+
+let userInfo = {
+    url: 'https://www.facebook.com/api/graphqlbatch/',
+    data: `batch_name:MessengerParticipantsFetcher,
+__aaid:0,
+__user:100004848287494,
+__a:1,
+__req:x,
+__hs:19903.HYP:comet_pkg.2.1..2.1,
+dpr:1,
+__ccg:GOOD,
+__rev:1014580163,
+__s:illkb9:j5tfzq:efkdpv,
+__hsi:7385998999642142127,
+__dyn:7AzHK4HwBgDx-5Q1hyoyEqxd4Ag5S3G2O5U4e2C3-4UKewSAx-bwNwnof8boG4E762S1DwUx60xU8k0Z82_CxS320om78bbwto88422y11wBz822weS4oaEnxO0Bo4O2-2l2UtwxwhU31wiE567Udo5qfK0zEkxe2GexeeDwkUtxGm2SUbElxm3y3aexfxmu3W3y2616DBx_wHwdG7FoarCwLyES0Io88cA0z8c84p1e4UK2K364UrwFgbU5-269wqQ1FwgU4q3G1eKufxa3mUqwjUy2-2K,
+__csr:gibb3A88lRFsh6IRlsLYSxfNJuzORSBfiPbLq-zagAAntRGPAjBAlbIpeIytrrdYDC9Hh7F5isBrsDuCGFeUV5A-uuEBdcUB-HcuQimVAuGKl4gGieB8-VFaQ9-8GnKjCAuQGChFFaybVSl6yF48h8ggXAAlavZ6iyFES-8haglzGVbz9WzkUGmm4pGzfK8z25yFF8kyEKUCdGbhVUC7F8y5UG59-m5p8tyE9E9rz8mxZ0wjAyEXx3Dz-8xrHz8rgxeu68iBUDm5E-fy47o4-48qAKaBwzwHG14x3-68lCAxfwAwWz8bobU9BKUC5Fo426UkiCyFU89VoaUeXx258oK2Cm3q7U885q1kwho-0yoK1uGdx6bwzguwFg620Q40_o4u0NXwty0p8O0Ko4i1nwa62G1bwj82qwfi024Gi04f2zo9k6UN5sU08pE1wEy1pw5Aw6rw3581kVA0gzwp8to0aEQ00DUA1fw4BwlE1g40sq0rl0be0bkw30UaEUw0OQE1Nu10w4CBw3DF5S0_o1h80gNw1Pa0a7w0Nqw5dJw2kU6fw10Si5O02go2OwaW0vmsMb8nw3i8ozU4C05xU0rmw,
+__comet_req:15,
+fb_dtsg:NAcNIjX9WtRxxyWE_ywRSj0zfD2JWmSnSA_jQpLR9cvXhOQQVYCs8bQ:7:1719250080,
+jazoest:25588,
+lsd:2l-io-0-XcTjjNl05b4Jvf,
+__spin_r:1014580163,
+__spin_b:trunk,
+__spin_t:1719686901,
+queries:{"o0":{"doc_id":"7225428284192887","query_params":{"ids":["100005086424758"]}}}`,
+};
+
+let postReactions = {
+    fb_api_caller_class: 'RelayModern',
+    fb_api_req_friendly_name: 'CometUFIReactionsDialogTabContentRefetchQuery',
+    variables: {
+        count: 10,
+        feedbackTargetID: 'ZmVlZGJhY2s6ODA0MDQyNTc1MTY1MDA3',
+        reactionID: null,
+        scale: 1,
+        id: 'ZmVlZGJhY2s6ODA0MDQyNTc1MTY1MDA3',
+        __relay_internal__pv__CometUFIReactionEnableShortNamerelayprovider: true,
+    },
+    doc_id: '7311826188912908',
+};

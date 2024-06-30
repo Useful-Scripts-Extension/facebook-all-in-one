@@ -1,15 +1,11 @@
 import { ExtensionID } from '../constants';
 
-export function connectExtension() {
-    return sendMessage({ action: 'fb_allInOne_init' });
-}
-
-export function runBgFunc(fnPath, params) {
+export function runExtFunc(fnPath, params) {
     return sendMessage({ action: 'fb_allInOne_runFunc', fnPath, params });
 }
 
 export function fetchExtension(url, options) {
-    return runBgFunc('fetch', { url, options });
+    return runExtFunc('fetch', [url, options]);
 }
 
 export function sendMessage(data) {
