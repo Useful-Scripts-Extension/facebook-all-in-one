@@ -157,12 +157,17 @@ export default function AllMessages() {
                     ></Button>
                 </Tooltip>
                 <Tooltip title={t('Download')}>
-                    <Button type="primary" icon={<i className="fa-solid fa-download"></i>}></Button>
+                    <Button
+                        disabled
+                        type="primary"
+                        icon={<i className="fa-solid fa-download"></i>}
+                    ></Button>
                 </Tooltip>
                 <Tooltip title={t('Delete')}>
                     <Button
                         type="primary"
                         danger
+                        disabled
                         icon={<i className="fa-solid fa-trash"></i>}
                     ></Button>
                 </Tooltip>
@@ -292,6 +297,7 @@ export default function AllMessages() {
                 {dataSelected?.length ? (
                     <Button
                         danger
+                        disabled
                         type="primary"
                         icon={<i className="fa-solid fa-trash-can"></i>}
                         onClick={() => onClickDelete(dataSelected)}
