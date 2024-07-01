@@ -92,8 +92,10 @@ export default function FirstMessages() {
         console.log(msgs);
         setMessages(msgs);
     };
+    const hasFetchPrevRef = useRef(false);
     useLayoutEffect(() => {
-        if (pagingState.fetchingPrev) {
+        if (hasFetchPrevRef.current && !pagingState.fetchingPrev) {
+            hasFetchPrevRef.current = false;
             let newScollHeight = listRef.current?.scrollHeight || 0;
             if (newScollHeight > scrollHeightRef.current)
                 listRef.current?.scrollTo({ top: newScollHeight - scrollHeightRef.current });
@@ -271,6 +273,7 @@ export default function FirstMessages() {
                 msgs.pop();
                 _setMessages([...msgs, ...messages]);
             }
+            hasFetchPrevRef.current = true;
             setPagingState(
                 produce(state => {
                     state.hasPrev = msgs.length > 1;
