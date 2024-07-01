@@ -1,6 +1,7 @@
 import React from "react";
 import { Button, Dropdown } from "antd";
 import { useTranslation } from "react-i18next";
+import { trackEvent } from "../utils/facebook";
 
 const languageMenuItems = [
     {
@@ -17,6 +18,7 @@ export default function LanguagePicker() {
     const { i18n } = useTranslation();
 
     const handleChangeLanguage = (e) => {
+        trackEvent("LanguagePicker:handleChangeLanguage:" + e.key);
         localStorage.lang = e.key;
         i18n.changeLanguage(e.key);
     };

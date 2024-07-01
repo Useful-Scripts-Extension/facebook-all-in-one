@@ -23,6 +23,7 @@ import {
     getAllProfilePhotos,
     getFbUrlFromId,
     pokeFriend,
+    trackEvent,
     unfriend,
 } from '../../utils/facebook';
 import MyTable from '../../components/MyTable';
@@ -123,6 +124,7 @@ export default function AllFriends() {
 
     const onClickReload = () => {
         if (loading) return;
+        trackEvent('AllFriends:onClickReload');
         const key = 'onClickReload';
         message.loading({ key, content: t('Fetching friends...') }, 0);
         setLoading(true);
@@ -146,6 +148,7 @@ export default function AllFriends() {
     const onClickExport = (selectedData, type) => {
         let dataToSave = selectedData?.length ? selectedData : friends;
         if (!dataToSave?.length) return message.error(t('No data to export'));
+        trackEvent('AllFriends:onClickExport');
         let filename = 'friends_' + dayjs().format('YYYY-MM-DD-HHmmss');
         if (type == 'json') fileDownload(JSON.stringify(dataToSave), filename + '.json');
         else if (type == 'csv') fileDownload(objectToCsv(dataToSave), filename + '.csv');
@@ -153,12 +156,12 @@ export default function AllFriends() {
     };
 
     const onClickUnfriendOne = async record => {
+        trackEvent('AllFriends:onClickUnfriendOne');
         const key = 'onClickUnfriendOne' + record.uid;
         try {
             message.loading({ key, content: t('Unfriending...') + ' ' + record.name }, 0);
             await unfriend({ myUid: profile?.uid, targetUid: record.uid });
             message.success({ key, content: t('Unfriend completed') + ': ' + record.name });
-
             updateFriendStatus(record, FRIEND_STATUS.UNFRIENDED);
             return true;
         } catch (err) {
@@ -172,6 +175,7 @@ export default function AllFriends() {
     };
 
     const onClickUnfriendSelected = async selectedData => {
+        trackEvent('AllFriends:onClickUnfriendSelected');
         const removedUid = new Set();
         for (let record of selectedData) {
             const success = await onClickUnfriendOne(record);
@@ -188,6 +192,7 @@ export default function AllFriends() {
     };
 
     const onClickPokeFriend = async record => {
+        trackEvent('AllFriends:onClickPokeFriend');
         const key = 'onClickPokeFriend' + record.uid;
         try {
             message.loading({ key, content: t('Poking...') + ' ' + record.name }, 0);
@@ -206,6 +211,7 @@ export default function AllFriends() {
     };
 
     const onClickPokeSelected = async selectedData => {
+        trackEvent('AllFriends:onClickPokeSelected');
         const pokedUid = new Set();
         for (let record of selectedData) {
             const success = await onClickPokeFriend(record);
@@ -222,6 +228,7 @@ export default function AllFriends() {
     };
 
     const onClickAddFriend = async record => {
+        trackEvent('AllFriends:onClickAddFriend');
         const key = 'onClickAddFriend' + record.uid;
         try {
             message.loading(
@@ -242,6 +249,7 @@ export default function AllFriends() {
     };
 
     const onClickAddFriendSelected = async selectedData => {
+        trackEvent('AllFriends:onClickAddFriendSelected');
         const addedUid = new Set();
         for (let record of selectedData) {
             const success = await onClickAddFriend(record);
@@ -259,7 +267,7 @@ export default function AllFriends() {
 
     const onClickFindLockedFriends = async () => {
         if (loadingLockedFriends) return;
-
+        trackEvent('AllFriends:onClickFindLockedFriends');
         tableRef.current.clearFilter();
 
         setLoadingLockedFriends('...');
@@ -309,6 +317,7 @@ export default function AllFriends() {
 
     const onClickFindBlockedMessages = async () => {
         if (loadingBlockedMessages) return;
+        trackEvent('AllFriends:onClickFindBlockedMessages');
         setLoadingBlockedMessages(true);
 
         const dataSelected = tableRef.current.getDataSelected();
@@ -351,6 +360,7 @@ export default function AllFriends() {
 
     const onUploadFriendsFile = async text => {
         if (!text) return message.error(t('File empty'));
+        trackEvent('AllFriends:onUploadFriendsFile');
 
         try {
             const json = JSON.parse(text);

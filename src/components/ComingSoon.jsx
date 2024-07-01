@@ -1,4 +1,4 @@
-import { Button, Result } from 'antd';
+import { Result } from 'antd';
 import { useTranslation } from 'react-i18next';
 
 export default function ComingSoon({ name }) {

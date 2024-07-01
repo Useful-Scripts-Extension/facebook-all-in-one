@@ -5,7 +5,12 @@ import fileDownload from 'js-file-download';
 import { useNavigate } from 'react-router-dom';
 import useStore, { selectors } from '../../store';
 import MyTable from '../../components/MyTable';
-import { getAllMessages, getFbUrlFromId, getUserAvatarFromUid } from '../../utils/facebook';
+import {
+    getAllMessages,
+    getFbUrlFromId,
+    getUserAvatarFromUid,
+    trackEvent,
+} from '../../utils/facebook';
 import { numberWithCommas, objectToCsv } from '../../utils/helper';
 
 const { Title } = Typography;
@@ -27,6 +32,7 @@ export default function AllMessages() {
 
     const onClickReload = () => {
         if (loading) return;
+        trackEvent('AllMessages:onClickReload');
         const key = 'onClickReload';
         message.loading({ key, content: t('Fetching messages...') });
         setLoading(true);
@@ -48,9 +54,8 @@ export default function AllMessages() {
 
     const onClickExport = (selectedData, type) => {
         let dataToSave = selectedData?.length ? selectedData : messages;
-
         if (!dataToSave?.length) return message.error(t('No data to export'));
-
+        trackEvent('AllMessages:onClickExport');
         if (type == 'json') {
             fileDownload(JSON.stringify(dataToSave), 'messages.json');
         } else if (type == 'csv') {
@@ -71,6 +76,7 @@ export default function AllMessages() {
     };
 
     const onClickFirstMessages = record => () => {
+        trackEvent('AllMessages:onClickFirstMessages');
         navigate('/messages/first', {
             state: { friendUid: record.id || record?.participants?.[0]?.id },
         });

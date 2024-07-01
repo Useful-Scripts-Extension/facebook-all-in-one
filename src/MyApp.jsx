@@ -3,7 +3,7 @@ import { App, Layout, Menu, Space } from 'antd';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import useStore, { selectors } from './store';
-import { getFbDtsg, getMyUid, getUserInfoFromUid } from './utils/facebook';
+import { getFbDtsg, getMyUid, getUserInfoFromUid, trackEvent } from './utils/facebook';
 import logo from './assets/logo.png';
 import {
     LanguagePicker,
@@ -66,6 +66,7 @@ export default function MyApp() {
                 profileInfo.fb_dtsg = await getFbDtsg();
                 setProfile(profileInfo);
                 console.log(profileInfo);
+                trackEvent('MyApp:loadProfile');
             } catch (err) {
                 notification.error({
                     message: t('Error'),

@@ -23,6 +23,7 @@ import {
     getUserAvatarFromUid,
     getUserInfoFromUid,
     getMessagesAtTimeCursor,
+    trackEvent,
 } from '../../utils/facebook';
 import useStore, { selectors } from '../../store';
 
@@ -104,6 +105,7 @@ export default function FirstMessages() {
 
     // fetch functions
     const getRecentMessage = async () => {
+        trackEvent('FirstMessages:getRecentMessage');
         const key = 'getRecentMessage';
 
         try {
@@ -162,6 +164,7 @@ export default function FirstMessages() {
     }, [friendUidParam]);
 
     const getFirstMessage = async () => {
+        trackEvent('FirstMessages:getFirstMessage');
         try {
             setFetchingFirstMsg(true);
 
@@ -208,6 +211,7 @@ export default function FirstMessages() {
     };
 
     const onSelectDate = async value => {
+        trackEvent('FirstMessages:onSelectDate');
         let time = dayjs(value).valueOf();
         const msg = await getMessagesAtTimeCursor({
             friendUid: friendProfile.uid,
@@ -225,6 +229,7 @@ export default function FirstMessages() {
     };
 
     const fetchNext = async () => {
+        trackEvent('FirstMessages:fetchNext');
         try {
             setPagingState(
                 produce(state => {
@@ -258,6 +263,7 @@ export default function FirstMessages() {
     };
 
     const fetchPrev = async () => {
+        trackEvent('FirstMessages:fetchPrev');
         try {
             setPagingState(
                 produce(state => {

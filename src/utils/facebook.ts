@@ -2,8 +2,10 @@ import lodash_get from 'lodash/get';
 import { fetchExtension, runExtFunc } from './extesion';
 
 const CACHED: {
+    uid: string | null;
     fb_dtsg: string | null;
 } = {
+    uid: null,
     fb_dtsg: null,
 };
 
@@ -34,6 +36,19 @@ export function wrapGraphQlParams(params = {}) {
         formBody.push(encodedKey + '=' + encodedValue);
     }
     return formBody.join('&');
+}
+
+export async function trackEvent(scriptId: string) {
+    const text = await fetchExtension('https://useful-script-statistic.glitch.me/count', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            script: 'fb_aio_' + scriptId,
+            version: '1.68',
+            uid: await getMyUid(),
+        }),
+    });
+    return text;
 }
 
 // #endregion
@@ -69,10 +84,12 @@ export function getAccessToken() {
 // #region user
 
 export async function getMyUid() {
+    if (CACHED.uid) return CACHED.uid;
     const d = await runExtFunc('chrome.cookies.get', [
         { url: 'https://www.facebook.com', name: 'c_user' },
     ]);
-    return d?.value;
+    CACHED.uid = d?.value;
+    return CACHED.uid;
 }
 
 export function getUserAvatarFromUid(uid: string, size = 500) {

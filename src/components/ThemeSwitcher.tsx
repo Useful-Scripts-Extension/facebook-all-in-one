@@ -1,10 +1,16 @@
 import React from "react";
 import useStore, { selectors } from "../store";
 import { Button } from "antd";
+import { trackEvent } from "../utils/facebook";
 
 export default function ThemeChanger() {
     const darkMode = useStore(selectors.darkMode);
     const setDarkMode = useStore(selectors.setDarkMode);
+
+    const _setDarkMode = (darkMode: boolean) => {
+        trackEvent("ThemeChanger:setDarkMode:" + darkMode);
+        setDarkMode(darkMode);
+    };
 
     return (
         <Button
@@ -16,7 +22,7 @@ export default function ThemeChanger() {
                     <i className="fa-solid fa-moon"></i>
                 )
             }
-            onClick={() => setDarkMode(!darkMode)}
+            onClick={() => _setDarkMode(!darkMode)}
         />
     );
 }
