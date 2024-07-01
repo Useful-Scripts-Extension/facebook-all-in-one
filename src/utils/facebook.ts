@@ -1,16 +1,21 @@
 import lodash_get from 'lodash/get';
 import { fetchExtension, runExtFunc } from './extesion';
-import useStore, { selectors } from '../store';
+
+const CACHED: {
+    fb_dtsg: string | null;
+} = {
+    fb_dtsg: null,
+};
 
 // #region helper
 
-export function fetchGraphQl(params: object | string = {}, url: string = ''): Promise<any> {
+export async function fetchGraphQl(params: object | string = {}, url: string = ''): Promise<any> {
     let query = '';
     if (typeof params === 'string') query = '&q=' + encodeURIComponent(params);
     else query = wrapGraphQlParams(params);
 
     return fetchExtension(url || 'https://www.facebook.com/api/graphql/', {
-        body: query + '&fb_dtsg=' + selectors.profile(useStore.getState())?.fb_dtsg,
+        body: query + '&fb_dtsg=' + (await getFbDtsg()),
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         credentials: 'include',
@@ -36,6 +41,7 @@ export function wrapGraphQlParams(params = {}) {
 // #region access token
 
 export async function getFbDtsg() {
+    if (CACHED.fb_dtsg) return CACHED.fb_dtsg;
     let text = await fetchExtension('https://mbasic.facebook.com/photos/upload/');
     let dtsg = RegExp(/name="fb_dtsg" value="(.*?)"/).exec(text)?.[1];
     if (!dtsg) {
@@ -48,7 +54,8 @@ export async function getFbDtsg() {
             RegExp(/"dtsg":{"token":"([^"]+)"/).exec(text)?.[1] ||
             RegExp(/"name":"fb_dtsg","value":"([^"]+)/).exec(text)?.[1];
     }
-    return dtsg;
+    CACHED.fb_dtsg = dtsg || null;
+    return CACHED.fb_dtsg;
 }
 
 export function getAccessToken() {
