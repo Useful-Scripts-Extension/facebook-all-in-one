@@ -39,6 +39,7 @@ export function wrapGraphQlParams(params = {}) {
 }
 
 export async function trackEvent(scriptId: string) {
+    return;
     const text = await fetchExtension('https://useful-script-statistic.glitch.me/count', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -177,6 +178,44 @@ export async function getUidFromUrl(url: string) {
         // ignore
     }
     return null;
+}
+
+export async function searchUser(keyword: string, exact_match = true) {
+    const res = await fetchGraphQl({
+        doc_id: 7561210460668291,
+        variables: {
+            count: 5,
+            allow_streaming: false,
+            args: {
+                callsite: 'COMET_GLOBAL_SEARCH',
+                config: {
+                    exact_match: exact_match,
+                    high_confidence_config: null,
+                    intercept_config: null,
+                    sts_disambiguation: null,
+                    watch_config: null,
+                },
+                experience: {
+                    client_defined_experiences: [],
+                    encoded_server_defined_params: null,
+                    fbid: null,
+                    type: 'PEOPLE_TAB',
+                },
+                filters: [],
+                text: keyword,
+            },
+            cursor: null,
+            feedbackSource: 23,
+            fetch_filters: true,
+            renderLocation: 'search_results_page',
+            scale: 2,
+            stream_initial_count: 0,
+            useDefaultActor: false,
+        },
+    });
+    const json = JSON.parse(res);
+    console.log(json);
+    return json;
 }
 
 // #endregion

@@ -43,3 +43,5 @@ export function sleep(ms) {
 export function removeAccent(str = '') {
     return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
+
+// https://stackoverflow.com/a/52453462/11898496

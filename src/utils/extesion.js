@@ -17,9 +17,7 @@ export function sendMessage(data) {
             window.chrome.runtime.sendMessage(ExtensionID, data, function (res) {
                 res && !res.error
                     ? resolve(res)
-                    : reject(
-                          res ? res.error : new Error('Cannot connect to extension Useful Scripts')
-                      );
+                    : reject(res ? res.error : new Error('Extension return empty'));
             });
         } catch (err) {
             return reject(err);

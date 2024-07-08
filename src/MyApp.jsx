@@ -18,6 +18,7 @@ const { Header, Sider, Content, Footer } = Layout;
 const AllMessages = React.lazy(() => import('./screens/Messages/AllMessages'));
 const FirstMessages = React.lazy(() => import('./screens/Messages/FirstMessages'));
 const AllFriends = React.lazy(() => import('./screens/Friends/AllFriends'));
+const BulkDownloader = React.lazy(() => import('./screens/BulkDownloader'));
 
 function convertMenuItemToAntd(items) {
     return items.map(item => {
@@ -54,8 +55,6 @@ export default function MyApp() {
 
     const profile = useStore(selectors.profile);
     const setProfile = useStore(selectors.setProfile);
-
-    console.log(profile);
 
     useEffect(() => {
         (async () => {
@@ -112,6 +111,12 @@ export default function MyApp() {
                     path: '/friends/all',
                     element: <AllFriends />,
                 },
+                // {
+                //     label: t('Find friends'),
+                //     icon: <i className="fa-solid fa-magnifying-glass"></i>,
+                //     path: '/friends/find',
+                //     element: <FindFriends />,
+                // },
                 {
                     label: t('Friend requests'),
                     icon: <i className="fa-solid fa-user-plus"></i>,
@@ -125,6 +130,12 @@ export default function MyApp() {
                     element: <ComingSoon name="Followings / Followers" />,
                 },
             ],
+        },
+        {
+            label: t('Bulk Downloader'),
+            icon: <i className="fa-solid fa-download"></i>,
+            path: '/bulk-downloader',
+            element: <BulkDownloader />,
         },
         {
             label: t('Groups'),
