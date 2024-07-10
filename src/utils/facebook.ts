@@ -1,12 +1,26 @@
 import lodash_get from 'lodash/get';
-import { fetchExtension, runExtFunc } from './extesion';
+import { fetchExtension, runExtFunc } from './extension';
+
+export enum ACCESS_TOKEN_TYPE {
+    EAAG = 'EAAG',
+    EAAB = 'EAAB',
+}
 
 const CACHED: {
     uid: string | null;
     fb_dtsg: string | null;
+    urlToId: Record<string, string>;
+    access_token: {
+        [key in ACCESS_TOKEN_TYPE]: string | null;
+    };
 } = {
     uid: null,
     fb_dtsg: null,
+    urlToId: {},
+    access_token: {
+        [ACCESS_TOKEN_TYPE.EAAG]: null,
+        [ACCESS_TOKEN_TYPE.EAAB]: null,
+    },
 };
 
 // #region helper
@@ -74,10 +88,46 @@ export async function getFbDtsg() {
     return CACHED.fb_dtsg;
 }
 
-export function getAccessToken() {
-    return fetchExtension('https://business.facebook.com/business_locations')
-        .then(htmlText => RegExp(/(EAAG\w+)/).exec(htmlText)?.[1])
-        .catch(e => alert('Error: ' + e));
+export async function getAccessToken(type: ACCESS_TOKEN_TYPE) {
+    if (CACHED.access_token[type]) return CACHED.access_token[type];
+
+    switch (type) {
+        case ACCESS_TOKEN_TYPE.EAAG:
+            const text1 = await fetchExtension('https://business.facebook.com/business_locations');
+            const token1 = RegExp(/(EAAG\w+)/).exec(text1)?.[1];
+            CACHED.access_token[type] = token1 || null;
+            return token1;
+
+        case ACCESS_TOKEN_TYPE.EAAB:
+            const fb_dtsg = await getFbDtsg();
+            const uid = await getMyUid();
+
+            const url = 'https://www.facebook.com/v1.0/dialog/oauth/confirm';
+            const params = new URLSearchParams({
+                fb_dtsg: fb_dtsg,
+                app_id: '124024574287414',
+                redirect_uri: 'fbconnect://success',
+                display: 'page',
+                access_token: '',
+                from_post: '1',
+                return_format: 'access_token',
+                domain: '',
+                sso_device: 'ios',
+                _CONFIRM: '1',
+                _user: uid,
+            }).toString();
+
+            const text2 = await fetchExtension(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: params,
+            });
+            const token2 = text2?.match(/(?<=access_token=)(.*?)(?=&)/)?.[0];
+            CACHED.access_token[type] = token2 || null;
+            return token2;
+    }
 }
 
 // #endregion
@@ -165,19 +215,26 @@ export function getFbUrlFromId(id: string) {
     return `https://fb.com/${id}`;
 }
 
-export async function getUidFromUrl(url: string) {
+export async function getIdFromUrl(url: string, regex: RegExp) {
     try {
+        if (CACHED.urlToId[url]) return CACHED.urlToId[url];
         let text = await fetchExtension(url);
         if (text) {
-            let uid = /(?<="userID":")(.\d+?)(?=")/.exec(text);
-            if (uid?.length) {
-                return uid[0];
+            let id = regex.exec(text);
+            console.log(text, id);
+            if (id?.length) {
+                CACHED.urlToId[url] = id[0];
+                return id[0];
             }
         }
     } catch (e) {
         // ignore
     }
     return null;
+}
+
+export function getUidFromUrl(url: string) {
+    return getIdFromUrl(url, /(?<="userID":")(.\d+?)(?=")/);
 }
 
 export async function searchUser(keyword: string, exact_match = true) {
@@ -266,6 +323,31 @@ export async function getAllProfilePhotos({ uid, onProgress }) {
         }
     }
     return photos;
+}
+
+export async function getAllAlbums({ id, accessToken, onProgress = albums => {} }) {
+    const albums = [];
+    let after = '';
+    while (true) {
+        try {
+            const res = await fetchExtension(
+                `https://graph.facebook.com/v14.0/${id}?fields=albums.limit(100){type,name,count,link,picture{url}}&access_token=${accessToken}&after=${after}`
+            );
+            const json = JSON.parse(res);
+            if (json.albums?.data?.length) {
+                albums.push(...json.albums.data);
+                onProgress?.(albums);
+            }
+
+            let nextAfter = json.albums?.paging?.cursors?.after;
+            if (!nextAfter || nextAfter === after) break;
+            after = nextAfter;
+        } catch (e) {
+            console.error(e);
+            break;
+        }
+    }
+    return albums;
 }
 
 // #endregion
