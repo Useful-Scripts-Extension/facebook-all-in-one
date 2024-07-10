@@ -278,8 +278,16 @@ export async function searchUser(keyword: string, exact_match = true) {
 // #endregion
 
 // #region photos
-
-export async function getProfilePhotos({ uid, count = 8, cursor = '' }) {
+export type IUserPhoto = {
+    id: string;
+    url: string;
+    thumbnail: string;
+    image: string;
+    width: number;
+    height: number;
+    accessibility_caption: string;
+};
+export async function getUserPhotos({ id, count = 8, cursor = '' }) {
     const res = await fetchGraphQl({
         doc_id: '4820192058049838',
         fb_api_caller_class: 'RelayModern',
@@ -288,12 +296,40 @@ export async function getProfilePhotos({ uid, count = 8, cursor = '' }) {
             count: count,
             cursor: cursor,
             scale: 1,
-            id: btoa(`app_collection:${uid}:2305272732:5`),
+            id: btoa(`app_collection:${id}:2305272732:5`),
+        },
+    });
+    const json = JSON.parse(res);
+    const { edges = [], page_info } = json?.data?.node?.pageItems || {};
+    return {
+        photos: edges.map(edge => ({
+            id: atob(edge?.node?.id).split(':').pop(),
+            url: edge?.node?.url,
+            thumbnail: edge?.node?.image?.uri,
+            image: edge?.node?.node?.viewer_image?.uri,
+            width: edge?.node?.node?.viewer_image?.width,
+            height: edge?.node?.node?.viewer_image?.height,
+            accessibility_caption: edge?.node?.node?.accessibility_caption,
+        })),
+        page_info,
+    };
+}
+
+export async function getGroupPhotos({ id, count = 8, cursor = '' }) {
+    const res = await fetchGraphQl({
+        doc_id: '6022153214500431',
+        fb_api_caller_class: 'RelayModern',
+        fb_api_req_friendly_name: 'GroupsCometMediaPhotosTabGridQuery',
+        variables: {
+            count: count,
+            cursor: cursor,
+            scale: 1,
+            id: id,
         },
     });
     const json = JSON.parse(res);
     console.log(json);
-    const { edges = [], page_info } = json?.data?.node?.pageItems || {};
+    const { edges = [], page_info } = json?.data?.node?.group_mediaset?.media || {};
     return {
         photos: edges.map(edge => ({
             url: edge?.node?.url,
@@ -307,15 +343,17 @@ export async function getProfilePhotos({ uid, count = 8, cursor = '' }) {
     };
 }
 
-export async function getAllProfilePhotos({ uid, onProgress }) {
+export async function getAllPhotos({ id, onProgress }) {
     const photos = [];
     let cursor = '';
     while (true) {
         try {
-            const res = await getProfilePhotos({ uid, cursor });
-            if (!res?.photos?.length || !res?.page_info?.has_next_page) break;
-            photos.push(...res.photos);
-            onProgress?.(photos);
+            const res = await getUserPhotos({ id, cursor });
+            if (res?.photos?.length) {
+                photos.push(...res.photos);
+                onProgress?.(photos);
+            }
+            if (!res?.page_info?.has_next_page) break;
             cursor = res.page_info.end_cursor;
         } catch (e) {
             console.log(e);
@@ -325,22 +363,56 @@ export async function getAllProfilePhotos({ uid, onProgress }) {
     return photos;
 }
 
-export async function getAllAlbums({ id, accessToken, onProgress = albums => {} }) {
-    const albums = [];
+export type IAlbum = {
+    id: string;
+    type: string;
+    recent: number;
+    name: string;
+    count: number;
+    link: string;
+    picture: {
+        data: {
+            url: string;
+        };
+    };
+};
+export async function getAllAlbums({
+    id,
+    accessToken,
+    onProgress,
+}: {
+    id: string;
+    accessToken: string;
+    onProgress?: (albums: IAlbum[]) => void;
+}) {
+    const albums: IAlbum[] = [];
+    const albumIds = new Set();
     let after = '';
     while (true) {
         try {
             const res = await fetchExtension(
-                `https://graph.facebook.com/v14.0/${id}?fields=albums.limit(100){type,name,count,link,picture{url}}&access_token=${accessToken}&after=${after}`
+                `https://graph.facebook.com/v14.0/${id}?fields=albums.limit(100)${
+                    after ? `.after(${after})` : ''
+                }{type,name,count,link,picture{url}}&access_token=${accessToken}`
             );
             const json = JSON.parse(res);
+            let added = 0;
             if (json.albums?.data?.length) {
-                albums.push(...json.albums.data);
+                for (const album of json.albums.data) {
+                    if (!albumIds.has(album.id)) {
+                        albums.push({
+                            ...album,
+                            recent: albums.length,
+                        });
+                        albumIds.add(album.id);
+                        added++;
+                    }
+                }
                 onProgress?.(albums);
             }
 
             let nextAfter = json.albums?.paging?.cursors?.after;
-            if (!nextAfter || nextAfter === after) break;
+            if (!nextAfter || nextAfter === after || !added) break;
             after = nextAfter;
         } catch (e) {
             console.error(e);
@@ -349,6 +421,69 @@ export async function getAllAlbums({ id, accessToken, onProgress = albums => {} 
     }
     return albums;
 }
+
+export type IVideo = {
+    id: string;
+    recent: number;
+    created_time: string;
+    description: string;
+    length: number;
+    post_id: string;
+    source: string;
+    picture: string;
+};
+export async function getAllVideos({
+    id,
+    accessToken,
+    onProgress,
+}: {
+    id: string;
+    accessToken: string;
+    onProgress?: (videos: IVideo[]) => void;
+}) {
+    const videos: IVideo[] = [];
+    const vidIds = new Set();
+    let after = '';
+    while (true) {
+        try {
+            const res = await fetchExtension(
+                `https://graph.facebook.com/v14.0/${id}?fields=videos.limit(100)${
+                    after ? `.after(${after})` : ''
+                }{created_time,description,id,length,post_id,source,picture}&access_token=${accessToken}`
+            );
+            const json = JSON.parse(res);
+            console.log(json);
+            let added = 0;
+            if (json.videos?.data?.length) {
+                for (const video of json.videos.data) {
+                    if (!vidIds.has(video.id)) {
+                        videos.push({
+                            ...video,
+                            recent: videos.length,
+                        });
+                        vidIds.add(video.id);
+                        added++;
+                    }
+                }
+                onProgress?.(videos);
+            }
+
+            let nextAfter = json.videos?.paging?.cursors?.after;
+            if (!nextAfter || nextAfter === after || !added) break;
+            after = nextAfter;
+        } catch (e) {
+            console.error(e);
+            break;
+        }
+    }
+    return videos;
+}
+
+// album photos
+// fb_api_req_friendly_name: CometAlbumPhotoCollagePaginationQuery
+// variables: {"count":14,"cursor":"ZmJpZDo1MjU3MDAyMDQxNTcxNDc=","renderLocation":"permalink","scale":2,"id":"489823451078156"}
+// server_timestamps: true
+// doc_id: 8142948395762884
 
 // #endregion
 

@@ -1,38 +1,33 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Space, Tabs, TabsProps, Input, Select, SelectProps } from 'antd';
+import React, { useMemo, useState } from 'react';
+import { Space, Tabs, TabsProps, Input, Select, SelectProps, Card, Image } from 'antd';
 import { useTranslation } from 'react-i18next';
 import {
     ACCESS_TOKEN_TYPE,
     getAccessToken,
     getAllAlbums,
-    getHoverCard,
-    getPageIdFromUrl,
+    getAllPhotos,
+    getAllVideos,
+    IAlbum,
+    IUserPhoto,
+    IVideo,
 } from '../../utils/facebook';
 
-const { Search } = Input;
+const Albums = React.lazy(() => import('./Albums'));
+const Videos = React.lazy(() => import('./Videos'));
+const Photos = React.lazy(() => import('./Photos'));
 
-const tabItems: TabsProps['items'] = [
-    {
-        key: '1',
-        label: 'About',
-        children: 'Content of Tab Pane 1',
-    },
-    {
-        key: '2',
-        label: 'Albums',
-        children: 'Content of Tab Pane 2',
-    },
-    {
-        key: '3',
-        label: 'Feeds',
-        children: 'Content of Tab Pane 3',
-    },
-];
+const { Search } = Input;
 
 const enum TargetType {
     User = 'User',
     Page = 'Page',
     Group = 'Group',
+}
+
+const enum TabKey {
+    Albums = 'Albums',
+    Videos = 'Videos',
+    Photos = 'Photos',
 }
 
 const options: SelectProps['options'] = [
@@ -64,33 +59,45 @@ const options: SelectProps['options'] = [
 
 export default function BulkDownloader() {
     const { t } = useTranslation();
+
+    const [selectedTab, setSelectedTab] = useState(TabKey.Photos);
     const [targetType, setTargetType] = useState(TargetType.User);
-    const [targetId, setTargetId] = useState('100083616450189');
-    const [data, setData] = useState(null);
+    const [targetId, setTargetId] = useState('100064840322550');
+
+    const [albums, setAlbums] = useState([] as IAlbum[]);
+    const [videos, setVideos] = useState([] as IVideo[]);
+    const [photos, setPhotos] = useState([] as IUserPhoto[]);
 
     const [searching, setSearching] = useState(false);
-
-    const accessTokenRef = useRef(null);
-
-    useEffect(() => {
-        // getAccessToken(ACCESS_TOKEN_TYPE.EAAB)
-        //     .then(accessToken => (accessTokenRef.current = accessToken))
-        //     .catch(alert);
-    }, []);
 
     const onSearch = async () => {
         setSearching(true);
         try {
             const accessToken = await getAccessToken(ACCESS_TOKEN_TYPE.EAAB);
             console.log('accessToken', accessToken);
-            const albums = await getAllAlbums({
-                id: targetId,
-                accessToken,
-                onProgress: data => {
-                    console.log('onProgress', data);
-                },
-            });
-            console.log('albums', albums);
+
+            await Promise.all([
+                getAllAlbums({
+                    id: targetId,
+                    accessToken,
+                    onProgress: _albums => {
+                        setAlbums([..._albums]);
+                    },
+                }),
+                getAllVideos({
+                    id: targetId,
+                    accessToken,
+                    onProgress: _videos => {
+                        setVideos([..._videos]);
+                    },
+                }),
+                getAllPhotos({
+                    id: targetId,
+                    onProgress: _photos => {
+                        setPhotos([..._photos]);
+                    },
+                }),
+            ]);
         } catch (e) {
             alert('Error: ' + e);
         } finally {
@@ -98,7 +105,27 @@ export default function BulkDownloader() {
         }
     };
 
-    const onChangeTab = () => {};
+    const onChangeTab = key => {
+        setSelectedTab(key);
+    };
+
+    const tabItems: TabsProps['items'] = [
+        {
+            key: TabKey.Photos,
+            label: 'Photos',
+            children: <Photos photos={photos} />,
+        },
+        {
+            key: TabKey.Videos,
+            label: 'Videos',
+            children: <Videos videos={videos} />,
+        },
+        {
+            key: TabKey.Albums,
+            label: 'Albums',
+            children: <Albums albums={albums} />,
+        },
+    ];
 
     return (
         <Space style={{ width: '100%', height: '100%' }} direction="vertical">
@@ -134,9 +161,7 @@ export default function BulkDownloader() {
                 </Space.Compact>
             </Space>
 
-            {data ? (
-                <Tabs defaultActiveKey="1" centered items={tabItems} onChange={onChangeTab} />
-            ) : null}
+            <Tabs defaultActiveKey={selectedTab} centered items={tabItems} onChange={onChangeTab} />
         </Space>
     );
 }
