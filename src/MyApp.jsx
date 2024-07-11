@@ -48,7 +48,7 @@ function convertMenuItemToRoute(items) {
 }
 
 export default function MyApp() {
-    const { message, notification } = App.useApp();
+    const { notification } = App.useApp();
     const { t } = useTranslation();
     const location = useLocation();
     const hydrated = useStore(selectors.hydrated);
@@ -157,6 +157,7 @@ export default function MyApp() {
     return (
         <Layout style={{ minHeight: '100vh' }}>
             {!hydrated && <LoadingFullScreen />}
+
             <Sider collapsible width={250} breakpoint="lg">
                 <div
                     style={{

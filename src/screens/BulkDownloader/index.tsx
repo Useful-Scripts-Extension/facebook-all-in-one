@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Space, Tabs, TabsProps, Input, Select, SelectProps, Card, Image } from 'antd';
 import { useTranslation } from 'react-i18next';
 import {
@@ -69,6 +69,8 @@ export default function BulkDownloader() {
     const [photos, setPhotos] = useState([] as IUserPhoto[]);
 
     const [searching, setSearching] = useState(false);
+
+    const unmountedRef = useRef(false);
 
     const onSearch = async () => {
         setSearching(true);

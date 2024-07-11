@@ -93,17 +93,27 @@ export default function FirstMessages() {
         console.log(msgs);
         setMessages(msgs);
     };
-    const hasFetchPrevRef = useRef(false);
+    const hasFetchRef = useRef({
+        prev: false,
+        next: false,
+    });
     useLayoutEffect(() => {
-        if (hasFetchPrevRef.current && !pagingState.fetchingPrev) {
-            hasFetchPrevRef.current = false;
-            let newScollHeight = listRef.current?.scrollHeight || 0;
-            if (newScollHeight > scrollHeightRef.current)
-                listRef.current?.scrollTo({ top: newScollHeight - scrollHeightRef.current });
+        if (hasFetchRef.current.prev) {
+            if (!pagingState.fetchingPrev) {
+                hasFetchRef.current.prev = false;
+                let newScollHeight = listRef.current?.scrollHeight || 0;
+                if (newScollHeight > scrollHeightRef.current)
+                    listRef.current?.scrollTo({ top: newScollHeight - scrollHeightRef.current });
+            }
+        }
+        if (getRecentRef.current) {
+            getRecentRef.current = false;
+            listRef.current?.scrollTo({ top: listRef.current?.scrollHeight || 0 });
         }
     }, [messages, pagingState.fetchingPrev]);
 
     // fetch functions
+    const getRecentRef = useRef(false);
     const getRecentMessage = async () => {
         trackEvent('FirstMessages:getRecentMessage');
         const key = 'getRecentMessage';
@@ -146,6 +156,7 @@ export default function FirstMessages() {
             if (msgs?.length > 0) message.success({ key, content: t('Fetch completed') });
             else message.info({ key, content: t('No data to show') });
 
+            getRecentRef.current = true;
             setPagingState(
                 produce(state => {
                     state.hasNext = msgs.length > 1;
@@ -246,6 +257,7 @@ export default function FirstMessages() {
                 msgs.shift();
                 _setMessages([...messages, ...msgs]);
             }
+            hasFetchRef.current.next = true;
             setPagingState(
                 produce(pagingState => {
                     pagingState.hasNext = msgs.length > 1;
@@ -279,7 +291,7 @@ export default function FirstMessages() {
                 msgs.pop();
                 _setMessages([...msgs, ...messages]);
             }
-            hasFetchPrevRef.current = true;
+            hasFetchRef.current.prev = true;
             setPagingState(
                 produce(state => {
                     state.hasPrev = msgs.length > 1;
