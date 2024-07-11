@@ -6,13 +6,13 @@ import { formatNumberWithCommas } from '../../utils/helper';
 export default function Albums({ albums }: { albums: IAlbum[] }) {
     return (
         <List
-            pagination={{ showTotal: total => `Total ${total} albums`, defaultPageSize: 30 }}
+            pagination={{ showTotal: total => `Total ${total} albums`, defaultPageSize: 20 }}
             grid={{ gutter: 10 }}
             dataSource={albums}
             renderItem={item => (
                 <List.Item>
                     <Card
-                        hoverable
+                        hoverable={true}
                         style={{ width: 200 }}
                         cover={
                             <Image
