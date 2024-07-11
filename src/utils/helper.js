@@ -45,3 +45,8 @@ export function removeAccent(str = '') {
 }
 
 // https://stackoverflow.com/a/52453462/11898496
+
+export function formatNumberWithCommas(x) {
+    if (!x) return 0;
+    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}

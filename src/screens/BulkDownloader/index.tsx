@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Space, Tabs, TabsProps, Input, Select, SelectProps, Card, Image } from 'antd';
+import { Space, Tabs, TabsProps, Input, Select, SelectProps, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import {
     ACCESS_TOKEN_TYPE,
@@ -70,14 +70,21 @@ export default function BulkDownloader() {
 
     const [searching, setSearching] = useState(false);
 
-    const unmountedRef = useRef(false);
+    const stopLoadRef = useRef(false);
     useEffect(() => {
         return () => {
-            unmountedRef.current = true;
+            stopLoadRef.current = true;
         };
     }, []);
 
     const onSearch = async () => {
+        if (searching) {
+            stopLoadRef.current = true;
+            setSearching(false);
+            return;
+        }
+
+        stopLoadRef.current = false;
         setSearching(true);
         try {
             const accessToken = await getAccessToken(ACCESS_TOKEN_TYPE.EAAB);
@@ -89,7 +96,7 @@ export default function BulkDownloader() {
                     accessToken,
                     onProgress: _albums => {
                         setAlbums([..._albums]);
-                        return unmountedRef.current;
+                        return stopLoadRef.current;
                     },
                 }),
                 getAllVideos({
@@ -97,15 +104,15 @@ export default function BulkDownloader() {
                     accessToken,
                     onProgress: _videos => {
                         setVideos([..._videos]);
-                        return unmountedRef.current;
+                        return stopLoadRef.current;
                     },
                 }),
                 getAllPhotos({
                     id: targetId,
                     onProgress: _photos => {
                         setPhotos([..._photos]);
-                        console.log(_photos.length, unmountedRef.current);
-                        return unmountedRef.current;
+                        console.log(_photos.length, stopLoadRef.current);
+                        return stopLoadRef.current;
                     },
                 }),
             ]);
@@ -159,6 +166,7 @@ export default function BulkDownloader() {
                         value={targetType}
                         onChange={setTargetType}
                     />
+
                     <Search
                         value={targetId}
                         placeholder={t('Enter id of ') + targetType}
@@ -166,7 +174,11 @@ export default function BulkDownloader() {
                         style={{ width: 300 }}
                         onChange={e => setTargetId(e.target.value)}
                         onSearch={onSearch}
-                        enterButton={<i className="fa-solid fa-wand-magic-sparkles"></i>}
+                        enterButton={
+                            <Tooltip title={searching ? t('Stop') : t('Start')}>
+                                <i className="fa-solid fa-wand-magic-sparkles"></i>
+                            </Tooltip>
+                        }
                         loading={searching}
                     />
                 </Space.Compact>

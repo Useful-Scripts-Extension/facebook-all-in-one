@@ -20,13 +20,13 @@ const FirstMessages = React.lazy(() => import('./screens/Messages/FirstMessages'
 const AllFriends = React.lazy(() => import('./screens/Friends/AllFriends'));
 const BulkDownloader = React.lazy(() => import('./screens/BulkDownloader'));
 
-function convertMenuItemToAntd(items) {
+function convertMenuItemToAntd(items, t) {
     return items.map(item => {
         return {
             key: item.path || item.label,
-            label: item.path ? <Link to={item.path}>{item.label}</Link> : item.label,
+            label: item.path ? <Link to={item.path}>{t(item.label)}</Link> : t(item.label),
             icon: item.icon,
-            children: item.children ? convertMenuItemToAntd(item.children) : null,
+            children: item.children ? convertMenuItemToAntd(item.children, t) : null,
         };
     });
 }
@@ -46,6 +46,81 @@ function convertMenuItemToRoute(items) {
     });
     return routes;
 }
+
+const menuItems = [
+    {
+        label: 'Dashboard',
+        icon: <i className="fa-solid fa-house"></i>,
+        path: '/',
+        element: <ComingSoon name="Dashboard" />,
+    },
+    {
+        label: 'Messages',
+        icon: <i className="fa-brands fa-facebook-messenger"></i>,
+        children: [
+            {
+                label: 'All messages',
+                icon: <i className="fa-solid fa-comments"></i>,
+                path: '/messages/all',
+                element: <AllMessages />,
+            },
+            {
+                label: 'First messages',
+                icon: <i className="fa-solid fa-clock-rotate-left"></i>,
+                path: '/messages/first',
+                element: <FirstMessages />,
+            },
+        ],
+    },
+    {
+        label: 'Friends',
+        icon: <i className="fa-solid fa-user-group"></i>,
+        children: [
+            {
+                label: 'All friends',
+                icon: <i className="fa-solid fa-users"></i>,
+                path: '/friends/all',
+                element: <AllFriends />,
+            },
+            // {
+            //     label: ('Find friends'),
+            //     icon: <i className="fa-solid fa-magnifying-glass"></i>,
+            //     path: '/friends/find',
+            //     element: <FindFriends />,
+            // },
+            {
+                label: 'Friend requests',
+                icon: <i className="fa-solid fa-user-plus"></i>,
+                path: '/friends/requests',
+                element: <ComingSoon name="Friend requests" />,
+            },
+            {
+                label: 'Follow',
+                icon: <i className="fa-solid fa-person-walking-arrow-right"></i>,
+                path: '/friends/follow',
+                element: <ComingSoon name="Followings / Followers" />,
+            },
+        ],
+    },
+    {
+        label: 'Bulk Downloader',
+        icon: <i className="fa-solid fa-download"></i>,
+        path: '/bulk-downloader',
+        element: <BulkDownloader />,
+    },
+    {
+        label: 'Groups',
+        icon: <i className="fa-solid fa-users-line"></i>,
+        path: '/groups',
+        element: <ComingSoon name="Groups" />,
+    },
+    {
+        label: 'Pages',
+        icon: <i className="fa-solid fa-flag"></i>,
+        path: '/pages',
+        element: <ComingSoon name="Pages" />,
+    },
+];
 
 export default function MyApp() {
     const { notification } = App.useApp();
@@ -76,82 +151,7 @@ export default function MyApp() {
         })();
     }, []);
 
-    const menuItems = [
-        {
-            label: t('Dashboard'),
-            icon: <i className="fa-solid fa-house"></i>,
-            path: '/',
-            element: <ComingSoon name="Dashboard" />,
-        },
-        {
-            label: t('Messages'),
-            icon: <i className="fa-brands fa-facebook-messenger"></i>,
-            children: [
-                {
-                    label: t('All messages'),
-                    icon: <i className="fa-solid fa-comments"></i>,
-                    path: '/messages/all',
-                    element: <AllMessages />,
-                },
-                {
-                    label: t('First messages'),
-                    icon: <i className="fa-solid fa-clock-rotate-left"></i>,
-                    path: '/messages/first',
-                    element: <FirstMessages />,
-                },
-            ],
-        },
-        {
-            label: t('Friends'),
-            icon: <i className="fa-solid fa-user-group"></i>,
-            children: [
-                {
-                    label: t('All friends'),
-                    icon: <i className="fa-solid fa-users"></i>,
-                    path: '/friends/all',
-                    element: <AllFriends />,
-                },
-                // {
-                //     label: t('Find friends'),
-                //     icon: <i className="fa-solid fa-magnifying-glass"></i>,
-                //     path: '/friends/find',
-                //     element: <FindFriends />,
-                // },
-                {
-                    label: t('Friend requests'),
-                    icon: <i className="fa-solid fa-user-plus"></i>,
-                    path: '/friends/requests',
-                    element: <ComingSoon name="Friend requests" />,
-                },
-                {
-                    label: t('Follow'),
-                    icon: <i className="fa-solid fa-person-walking-arrow-right"></i>,
-                    path: '/friends/follow',
-                    element: <ComingSoon name="Followings / Followers" />,
-                },
-            ],
-        },
-        {
-            label: t('Bulk Downloader'),
-            icon: <i className="fa-solid fa-download"></i>,
-            path: '/bulk-downloader',
-            element: <BulkDownloader />,
-        },
-        {
-            label: t('Groups'),
-            icon: <i className="fa-solid fa-users-line"></i>,
-            path: '/groups',
-            element: <ComingSoon name="Groups" />,
-        },
-        {
-            label: t('Pages'),
-            icon: <i className="fa-solid fa-flag"></i>,
-            path: '/pages',
-            element: <ComingSoon name="Pages" />,
-        },
-    ];
-
-    const antdMenuItems = convertMenuItemToAntd(menuItems);
+    const antdMenuItems = convertMenuItemToAntd(menuItems, t);
     const routes = convertMenuItemToRoute(menuItems);
 
     return (
@@ -193,15 +193,13 @@ export default function MyApp() {
                     ) : (
                         <React.Suspense fallback={<LoadingFullScreen onlyFillContainer />}>
                             <Routes>
-                                {routes.map(route => {
-                                    return (
-                                        <Route
-                                            key={route.path}
-                                            path={route.path}
-                                            element={route.element}
-                                        />
-                                    );
-                                })}
+                                {routes.map(route => (
+                                    <Route
+                                        key={route.path}
+                                        path={route.path}
+                                        element={route.element}
+                                    />
+                                ))}
                             </Routes>
                         </React.Suspense>
                     )}

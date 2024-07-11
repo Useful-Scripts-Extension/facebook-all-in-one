@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App, ConfigProvider, theme } from 'antd';
@@ -11,19 +12,17 @@ export function Container() {
     const darkMode = useStore(selectors.darkMode);
 
     return (
-        // <React.StrictMode>
-        <ConfigProvider
-            theme={{
-                algorithm: darkMode ? theme.darkAlgorithm : theme.lightAlgorithm,
-            }}
-        >
-            <App>
-                <BrowserRouter future={{ v7_startTransition: true }}>
-                    <MyApp />
-                </BrowserRouter>
-            </App>
-        </ConfigProvider>
-        // </React.StrictMode>
+        <StrictMode>
+            <ConfigProvider
+                theme={{ algorithm: darkMode ? theme.darkAlgorithm : theme.lightAlgorithm }}
+            >
+                <App>
+                    <BrowserRouter future={{ v7_startTransition: true }}>
+                        <MyApp />
+                    </BrowserRouter>
+                </App>
+            </ConfigProvider>
+        </StrictMode>
     );
 }
 
