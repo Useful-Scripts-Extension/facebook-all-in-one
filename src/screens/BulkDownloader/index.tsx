@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Space, Tabs, TabsProps, Input, Select, SelectProps, Card, Image } from 'antd';
 import { useTranslation } from 'react-i18next';
 import {
@@ -71,6 +71,11 @@ export default function BulkDownloader() {
     const [searching, setSearching] = useState(false);
 
     const unmountedRef = useRef(false);
+    useEffect(() => {
+        return () => {
+            unmountedRef.current = true;
+        };
+    }, []);
 
     const onSearch = async () => {
         setSearching(true);
@@ -84,6 +89,7 @@ export default function BulkDownloader() {
                     accessToken,
                     onProgress: _albums => {
                         setAlbums([..._albums]);
+                        return unmountedRef.current;
                     },
                 }),
                 getAllVideos({
@@ -91,12 +97,15 @@ export default function BulkDownloader() {
                     accessToken,
                     onProgress: _videos => {
                         setVideos([..._videos]);
+                        return unmountedRef.current;
                     },
                 }),
                 getAllPhotos({
                     id: targetId,
                     onProgress: _photos => {
                         setPhotos([..._photos]);
+                        console.log(_photos.length, unmountedRef.current);
+                        return unmountedRef.current;
                     },
                 }),
             ]);

@@ -5,7 +5,7 @@ import { IUserPhoto } from '../../utils/facebook';
 export default function Photos({ photos }: { photos: IUserPhoto[] }) {
     return (
         <List
-            pagination={{ showTotal: total => `Total ${total} photos` }}
+            pagination={{ showTotal: total => `Total ${total} photos`, defaultPageSize: 30 }}
             grid={{ gutter: 10 }}
             dataSource={photos}
             renderItem={item => (
