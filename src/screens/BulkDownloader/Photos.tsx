@@ -1,8 +1,30 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Image, List } from 'antd';
-import { IUserPhoto } from '../../utils/facebook';
+import { getAllPhotos, IUserPhoto, TargetType } from '../../utils/facebook';
 
-export default function Photos({ photos }: { photos: IUserPhoto[] }) {
+export default function Photos({
+    targetId,
+    targetType,
+}: {
+    targetId: string | undefined;
+    targetType: TargetType | undefined;
+}) {
+    const [photos, setPhotos] = useState([] as IUserPhoto[]);
+
+    const stopLoadRef = useRef(false);
+
+    useEffect(() => {
+        if (targetId && targetType)
+            getAllPhotos({
+                targetType: targetType,
+                id: targetId,
+                onProgress: _photos => {
+                    setPhotos([..._photos]);
+                    return stopLoadRef.current;
+                },
+            }).then(setPhotos);
+    }, [targetId, targetType]);
+
     return (
         <List
             pagination={{ showTotal: total => `Total ${total} photos`, defaultPageSize: 30 }}

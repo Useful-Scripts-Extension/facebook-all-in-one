@@ -1,9 +1,27 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Badge, Card, Image, List } from 'antd';
-import { IVideo } from '../../utils/facebook';
+import { ACCESS_TOKEN_TYPE, getAccessToken, getAllVideos, IVideo } from '../../utils/facebook';
 import { formatSeconds, limitString } from '../../utils/helper';
 
-export default function Videos({ videos }: { videos: IVideo[] }) {
+export default function Videos({ targetId }: { targetId: string | undefined }) {
+    const [videos, setVideos] = useState([] as IVideo[]);
+
+    const stopLoadRef = useRef(false);
+
+    useEffect(() => {
+        if (targetId)
+            getAccessToken(ACCESS_TOKEN_TYPE.EAAB).then(accessToken =>
+                getAllVideos({
+                    id: targetId,
+                    accessToken,
+                    onProgress: _videos => {
+                        setVideos([..._videos]);
+                        return stopLoadRef.current;
+                    },
+                }).then(setVideos)
+            );
+    }, [targetId]);
+
     return (
         <List
             pagination={{ showTotal: total => `Total ${total} videos`, defaultPageSize: 20 }}
@@ -37,7 +55,7 @@ export default function Videos({ videos }: { videos: IVideo[] }) {
                             </Badge.Ribbon>
                         }
                         actions={[
-                            <a href={'https://fb.com/' + item.post_id} target="_blank">
+                            <a href={item.url} target="_blank">
                                 <i className="fa-solid fa-up-right-from-square"></i>
                             </a>,
                         ]}

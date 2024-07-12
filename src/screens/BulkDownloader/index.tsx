@@ -1,19 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Space, Tabs, TabsProps, Input, Tooltip, Card, Avatar } from 'antd';
 import { useTranslation } from 'react-i18next';
-import {
-    ACCESS_TOKEN_TYPE,
-    getAccessToken,
-    getAllAlbums,
-    getAllPhotos,
-    getAllVideos,
-    getHoverCard,
-    IAlbum,
-    IEntityAbout,
-    IUserPhoto,
-    IVideo,
-    TargetType,
-} from '../../utils/facebook';
+import { getHoverCard, IEntityAbout, TargetType } from '../../utils/facebook';
 
 const Albums = React.lazy(() => import('./Albums'));
 const Videos = React.lazy(() => import('./Videos'));
@@ -31,69 +19,20 @@ export default function BulkDownloader() {
     const { t } = useTranslation();
 
     const [selectedTab, setSelectedTab] = useState(TabKey.Photos);
-    const [targetId, setTargetId] = useState('100064840322550');
-
     const [about, setAbout] = useState(null as IEntityAbout | null);
-    const [albums, setAlbums] = useState([] as IAlbum[]);
-    const [videos, setVideos] = useState([] as IVideo[]);
-    const [photos, setPhotos] = useState([] as IUserPhoto[]);
+    const [targetId, setTargetId] = useState('100064840322550');
+    const [searching, setSearching] = useState(false);
 
     const targetType = about?.type || TargetType.User;
 
-    const [searching, setSearching] = useState(false);
-
-    const stopLoadRef = useRef(false);
-    useEffect(() => {
-        return () => {
-            stopLoadRef.current = true;
-        };
-    }, []);
-
     const onSearch = async () => {
-        if (searching) {
-            stopLoadRef.current = true;
-            setSearching(false);
-            return;
-        }
-
-        stopLoadRef.current = false;
         setSearching(true);
         try {
             const about = await getHoverCard(targetId);
             console.log(about);
             setAbout(about);
-
-            const accessToken = await getAccessToken(ACCESS_TOKEN_TYPE.EAAB);
-            console.log('accessToken', accessToken);
-
-            await Promise.all([
-                getAllAlbums({
-                    id: targetId,
-                    accessToken,
-                    onProgress: _albums => {
-                        setAlbums([..._albums]);
-                        return stopLoadRef.current;
-                    },
-                }).then(setAlbums),
-                getAllVideos({
-                    id: targetId,
-                    accessToken,
-                    onProgress: _videos => {
-                        setVideos([..._videos]);
-                        return stopLoadRef.current;
-                    },
-                }).then(setVideos),
-                getAllPhotos({
-                    targetType: about.type,
-                    id: targetId,
-                    onProgress: _photos => {
-                        setPhotos([..._photos]);
-                        return stopLoadRef.current;
-                    },
-                }).then(setPhotos),
-            ]);
         } catch (e) {
-            alert('Error: ' + e);
+            alert('Error: ' + e.message);
         } finally {
             setSearching(false);
         }
@@ -107,17 +46,17 @@ export default function BulkDownloader() {
         {
             key: TabKey.Photos,
             label: 'Photos',
-            children: <Photos photos={photos} />,
+            children: <Photos targetId={about?.id} targetType={about?.type} />,
         },
         {
             key: TabKey.Videos,
             label: 'Videos',
-            children: <Videos videos={videos} />,
+            children: <Videos targetId={about?.id} />,
         },
         {
             key: TabKey.Albums,
             label: 'Albums',
-            children: <Albums albums={albums} />,
+            children: <Albums targetId={about?.id} />,
         },
     ];
 

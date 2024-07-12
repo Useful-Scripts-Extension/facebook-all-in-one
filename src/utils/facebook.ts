@@ -301,7 +301,7 @@ export async function searchUser(keyword: string, exact_match = true) {
 
 // #endregion
 
-// #region photos
+// #region media: photos/videos/albums
 export type IUserPhoto = {
     id: string;
     url: string;
@@ -311,7 +311,15 @@ export type IUserPhoto = {
     height: number;
     accessibility_caption: string;
 };
-export async function getUserPhotos({ id, count = 8, cursor = '' }) {
+
+export type IListPhotos = {
+    photos: Array<IUserPhoto>;
+    page_info: {
+        end_cursor: string;
+        has_next_page: boolean;
+    };
+};
+export async function getUserPhotos({ id, count = 8, cursor = '' }): Promise<IListPhotos> {
     const res = await fetchGraphQl({
         doc_id: '4820192058049838',
         fb_api_caller_class: 'RelayModern',
@@ -339,7 +347,7 @@ export async function getUserPhotos({ id, count = 8, cursor = '' }) {
     };
 }
 
-export async function getGroupPhotos({ id, count = 8, cursor = '' }) {
+export async function getGroupPhotos({ id, count = 8, cursor = '' }): Promise<IListPhotos> {
     const res = await fetchGraphQl({
         doc_id: '6022153214500431',
         fb_api_caller_class: 'RelayModern',
@@ -373,7 +381,7 @@ export enum TargetType {
     Group = 'group',
 }
 export async function getAllPhotos({ id, onProgress, targetType = TargetType.User }) {
-    const photos = [];
+    const photos: IUserPhoto[] = [];
     let cursor = '';
     while (true) {
         try {
@@ -384,7 +392,7 @@ export async function getAllPhotos({ id, onProgress, targetType = TargetType.Use
             if (res?.photos?.length) {
                 photos.push(...res.photos);
                 let stop = onProgress?.(photos);
-                if (stop) break;
+                if (stop) return photos;
             }
             if (!res?.page_info?.has_next_page) break;
             cursor = res.page_info.end_cursor;
@@ -403,11 +411,12 @@ export type IAlbum = {
     name: string;
     count: number;
     link: string;
-    picture: {
-        data: {
-            url: string;
-        };
-    };
+    picture: string;
+    // {
+    //     data: {
+    //         url: string;
+    //     };
+    // };
 };
 export async function getAllAlbums({
     id,
@@ -420,6 +429,8 @@ export async function getAllAlbums({
 }) {
     const albums: IAlbum[] = [];
     const albumIds = new Set();
+
+    // access token way
     let after = '';
     while (true) {
         try {
@@ -434,7 +445,12 @@ export async function getAllAlbums({
                 for (const album of json.albums.data) {
                     if (!albumIds.has(album.id)) {
                         albums.push({
-                            ...album,
+                            id: album.id,
+                            type: album.type,
+                            name: album.name,
+                            count: album.count,
+                            link: album.link,
+                            picture: album.picture.data.url,
                             recent: albums.length,
                         });
                         albumIds.add(album.id);
@@ -442,7 +458,7 @@ export async function getAllAlbums({
                     }
                 }
                 let stop = onProgress?.(albums);
-                if (stop) break;
+                if (stop) return albums;
             }
 
             let nextAfter = json.albums?.paging?.cursors?.after;
@@ -453,6 +469,49 @@ export async function getAllAlbums({
             break;
         }
     }
+
+    // graphql way
+    let cursor = '';
+    while (true) {
+        try {
+            const res = await fetchGraphQl({
+                fb_api_req_friendly_name: 'ProfileCometAppCollectionAlbumsRendererPaginationQuery',
+                variables: {
+                    cursor,
+                    count: 8,
+                    scale: 2,
+                    id: btoa(`app_collection:${id}:2305272732:6`),
+                },
+                doc_id: '8672545689426653',
+            });
+            const json = JSON.parse(res);
+            const { edges = [], page_info = {} } = json?.data?.node?.pageItems || {};
+            for (const edge of edges) {
+                const id = atob(edge?.node?.id).split(':').pop() || '';
+                if (!albumIds.has(id)) {
+                    albums.push({
+                        id,
+                        type: 'album',
+                        name: edge?.node?.title?.text,
+                        count: parseInt(edge?.node?.subtitle_text?.text) || 0,
+                        link: edge?.node?.url,
+                        picture: edge?.node?.image?.uri,
+                        recent: albums.length,
+                    });
+                    albumIds.add(id);
+                }
+            }
+            let stop = onProgress?.(albums);
+            if (stop) return albums;
+
+            if (!page_info?.has_next_page) break;
+            cursor = page_info.end_cursor;
+        } catch (e) {
+            console.error(e);
+            break;
+        }
+    }
+
     return albums;
 }
 
@@ -462,7 +521,7 @@ export type IVideo = {
     created_time: string;
     description: string;
     length: number;
-    post_id: string;
+    url: string;
     source: string;
     picture: string;
 };
@@ -477,6 +536,8 @@ export async function getAllVideos({
 }) {
     const videos: IVideo[] = [];
     const vidIds = new Set();
+
+    // access token way
     let after = '';
     while (true) {
         try {
@@ -492,15 +553,21 @@ export async function getAllVideos({
                 for (const video of json.videos.data) {
                     if (!vidIds.has(video.id)) {
                         videos.push({
-                            ...video,
+                            id: video.id,
                             recent: videos.length,
+                            created_time: video.created_time,
+                            description: video.description,
+                            length: video.length,
+                            url: 'https://fb.com/' + video.post_id,
+                            source: video.source,
+                            picture: video.picture,
                         });
                         vidIds.add(video.id);
                         added++;
                     }
                 }
                 let stop = onProgress?.(videos);
-                if (stop) break;
+                if (stop) return videos;
             }
 
             let nextAfter = json.videos?.paging?.cursors?.after;
@@ -511,7 +578,91 @@ export async function getAllVideos({
             break;
         }
     }
+
+    // graphql way
+    let cursor = '';
+    while (true) {
+        try {
+            const res = await fetchGraphQl({
+                variables: {
+                    cursor,
+                    count: 8,
+                    scale: 1,
+                    id: btoa(`app_collection:${id}:1560653304174514:133`),
+                },
+                doc_id: '3975496529227403',
+            });
+            const json = JSON.parse(res);
+
+            const { edges = [], page_info = {} } = json?.data?.node?.pageItems || {};
+            for (const edge of edges) {
+                const id = edge?.node?.node?.id || '';
+                if (!vidIds.has(id)) {
+                    // const videoInfo = await getVideoInfo(id);
+                    videos.push({
+                        id,
+                        recent: videos.length,
+                        created_time: '', // videoInfo.created_time,
+                        description: edge?.node?.title?.text,
+                        length: edge?.node?.node?.playable_duration,
+                        url: edge?.node?.url,
+                        source: '', // videoInfo.source,
+                        picture: edge?.node?.image?.uri, //videoInfo.thumbnail
+                    });
+                    vidIds.add(id);
+                }
+            }
+            // TODO move inside for loop if enable getVideoInfo
+            let stop = onProgress?.(videos);
+            if (stop) return videos;
+
+            if (!page_info?.has_next_page) break;
+            cursor = page_info?.end_cursor;
+        } catch (e) {
+            console.error(e);
+            break;
+        }
+    }
+
     return videos;
+}
+
+export async function getVideoInfo(videoId: string) {
+    const res = await fetchGraphQl({
+        variables: {
+            UFI2CommentsProvider_commentsKey: 'CometTahoeSidePaneQuery',
+            caller: 'CHANNEL_VIEW_FROM_PAGE_TIMELINE',
+            displayCommentsContextEnableComment: null,
+            displayCommentsContextIsAdPreview: null,
+            displayCommentsContextIsAggregatedShare: null,
+            displayCommentsContextIsStorySet: null,
+            displayCommentsFeedbackContext: null,
+            feedbackSource: 41,
+            feedLocation: 'TAHOE',
+            focusCommentID: null,
+            privacySelectorRenderLocation: 'COMET_STREAM',
+            renderLocation: 'video_channel',
+            scale: 1,
+            streamChainingSection: !1,
+            useDefaultActor: !1,
+            videoChainingContext: null,
+            videoID: videoId,
+        },
+        doc_id: '5279476072161634',
+    });
+    const videoInfo = JSON.parse(res.split('\n')[0]).data.video;
+    console.log(videoInfo);
+    return {
+        id: videoInfo.videoId || videoInfo.id,
+        owner: videoInfo.owner.id,
+        length: videoInfo.playable_duration_in_ms / 1000,
+        url: videoInfo.url,
+        width: videoInfo.original_width,
+        height: videoInfo.original_height,
+        source: videoInfo.playable_url_quality_hd || videoInfo.playable_url,
+        created_time: (videoInfo.publish_time * 1000).toString(),
+        thumbnail: videoInfo.preferred_thumbnail?.image?.uri,
+    };
 }
 
 // album photos

@@ -1,9 +1,27 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Badge, Card, Image, List } from 'antd';
-import { IAlbum } from '../../utils/facebook';
+import { ACCESS_TOKEN_TYPE, getAccessToken, getAllAlbums, IAlbum } from '../../utils/facebook';
 import { formatNumberWithCommas } from '../../utils/helper';
 
-export default function Albums({ albums }: { albums: IAlbum[] }) {
+export default function Albums({ targetId }: { targetId: string | undefined }) {
+    const [albums, setAlbums] = useState([] as IAlbum[]);
+
+    const stopLoadRef = useRef(false);
+
+    useEffect(() => {
+        if (targetId)
+            getAccessToken(ACCESS_TOKEN_TYPE.EAAB).then(accessToken =>
+                getAllAlbums({
+                    id: targetId,
+                    accessToken,
+                    onProgress: _albums => {
+                        setAlbums([..._albums]);
+                        return stopLoadRef.current;
+                    },
+                }).then(setAlbums)
+            );
+    }, [targetId]);
+
     return (
         <List
             pagination={{ showTotal: total => `Total ${total} albums`, defaultPageSize: 20 }}
@@ -17,8 +35,7 @@ export default function Albums({ albums }: { albums: IAlbum[] }) {
                         cover={
                             <Badge.Ribbon text={formatNumberWithCommas(item.count)}>
                                 <Image
-                                    src={item.picture?.data?.url}
-                                    // preview={{ src: item.image }}
+                                    src={item.picture}
                                     alt={item.name}
                                     width={200}
                                     height={200}
