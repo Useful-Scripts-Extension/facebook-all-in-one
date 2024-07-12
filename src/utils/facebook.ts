@@ -171,7 +171,6 @@ export async function getEntityAbout(entityID: string, context = 'DEFAULT'): Pro
         },
         doc_id: '7257793420991802',
     });
-
     const json = JSON.parse(res);
     console.log(json);
     const node = json.data.node;
@@ -315,6 +314,7 @@ export type IUserPhoto = {
     width: number;
     height: number;
     accessibility_caption: string;
+    cursor?: string;
 };
 
 export type IListPhotos = {
@@ -339,15 +339,19 @@ export async function getUserPhotos({ id, count = 8, cursor = '' }): Promise<ILi
     const json = JSON.parse(res);
     const { edges = [], page_info } = json?.data?.node?.pageItems || {};
     return {
-        photos: edges.map(edge => ({
-            id: atob(edge?.node?.id).split(':').pop(),
-            url: edge?.node?.url,
-            thumbnail: edge?.node?.image?.uri,
-            image: edge?.node?.node?.viewer_image?.uri,
-            width: edge?.node?.node?.viewer_image?.width,
-            height: edge?.node?.node?.viewer_image?.height,
-            accessibility_caption: edge?.node?.node?.accessibility_caption,
-        })),
+        photos: edges.map(
+            edge =>
+                ({
+                    id: atob(edge?.node?.id).split(':').pop(),
+                    url: edge?.node?.url,
+                    thumbnail: edge?.node?.image?.uri,
+                    image: edge?.node?.node?.viewer_image?.uri,
+                    width: edge?.node?.node?.viewer_image?.width,
+                    height: edge?.node?.node?.viewer_image?.height,
+                    accessibility_caption: edge?.node?.node?.accessibility_caption,
+                    cursor: edge?.cursor,
+                } as IUserPhoto)
+        ),
         page_info,
     };
 }
@@ -365,24 +369,26 @@ export async function getGroupPhotos({ id, count = 8, cursor = '' }): Promise<IL
         },
     });
     const json = JSON.parse(res);
-    console.log(json);
     const { edges = [], page_info } = json?.data?.node?.group_mediaset?.media || {};
     return {
-        photos: edges.map(edge => ({
-            url: edge?.node?.url,
-            thumbnail: edge?.node?.image?.uri,
-            image: edge?.node?.node?.viewer_image?.uri,
-            width: edge?.node?.node?.viewer_image?.width,
-            height: edge?.node?.node?.viewer_image?.height,
-            accessibility_caption: edge?.node?.node?.accessibility_caption,
-        })),
+        photos: edges.map(
+            edge =>
+                ({
+                    url: edge?.node?.url,
+                    thumbnail: edge?.node?.image?.uri,
+                    image: edge?.node?.node?.viewer_image?.uri,
+                    width: edge?.node?.node?.viewer_image?.width,
+                    height: edge?.node?.node?.viewer_image?.height,
+                    accessibility_caption: edge?.node?.node?.accessibility_caption,
+                    cursor: edge?.cursor,
+                } as IUserPhoto)
+        ),
         page_info,
     };
 }
 
-export async function getAllPhotos({ id, onProgress, targetType = TargetType.User }) {
+export async function getAllPhotos({ id, onProgress, targetType = TargetType.User, cursor = '' }) {
     const photos: IUserPhoto[] = [];
-    let cursor = '';
     while (true) {
         try {
             const res =
@@ -416,66 +422,19 @@ export type IAlbum = {
     count: number;
     link: string;
     picture: string;
-    // {
-    //     data: {
-    //         url: string;
-    //     };
-    // };
+    cursor?: string;
 };
-export async function getAllAlbums({
-    id,
-    accessToken,
+
+export async function getAllUserAlbums({
+    uid,
     onProgress,
+    cursor = '',
 }: {
-    id: string;
-    accessToken: string;
+    uid: string;
     onProgress?: (albums: IAlbum[]) => void;
+    cursor?: string;
 }) {
     const albums: IAlbum[] = [];
-    const albumIds = new Set();
-
-    // access token way
-    let after = '';
-    while (true) {
-        try {
-            const res = await fetchExtension(
-                `https://graph.facebook.com/v14.0/${id}?fields=albums.limit(100)${
-                    after ? `.after(${after})` : ''
-                }{type,name,count,link,picture{url}}&access_token=${accessToken}`
-            );
-            const json = JSON.parse(res);
-            let added = 0;
-            if (json.albums?.data?.length) {
-                for (const album of json.albums.data) {
-                    if (!albumIds.has(album.id)) {
-                        albums.push({
-                            id: album.id,
-                            type: album.type,
-                            name: album.name,
-                            count: album.count,
-                            link: album.link,
-                            picture: album.picture.data.url,
-                            recent: albums.length,
-                        });
-                        albumIds.add(album.id);
-                        added++;
-                    }
-                }
-                let stop = onProgress?.(albums);
-                if (stop) return albums;
-            }
-
-            let nextAfter = json.albums?.paging?.cursors?.after;
-            if (!nextAfter || nextAfter === after || !added) break;
-            after = nextAfter;
-        } catch (e) {
-            console.error(e);
-            break;
-        }
-    }
-
-    // graphql way
-    let cursor = '';
     while (true) {
         try {
             const res = await fetchGraphQl({
@@ -484,26 +443,25 @@ export async function getAllAlbums({
                     cursor,
                     count: 8,
                     scale: 2,
-                    id: btoa(`app_collection:${id}:2305272732:6`),
+                    id: btoa(`app_collection:${uid}:2305272732:6`),
                 },
                 doc_id: '8672545689426653',
             });
             const json = JSON.parse(res);
+            console.log(json);
             const { edges = [], page_info = {} } = json?.data?.node?.pageItems || {};
             for (const edge of edges) {
                 const id = atob(edge?.node?.id).split(':').pop() || '';
-                if (!albumIds.has(id)) {
-                    albums.push({
-                        id,
-                        type: 'album',
-                        name: edge?.node?.title?.text,
-                        count: parseInt(edge?.node?.subtitle_text?.text) || 0,
-                        link: edge?.node?.url,
-                        picture: edge?.node?.image?.uri,
-                        recent: albums.length,
-                    });
-                    albumIds.add(id);
-                }
+                albums.push({
+                    id,
+                    type: 'album',
+                    name: edge?.node?.title?.text,
+                    count: parseInt(edge?.node?.subtitle_text?.text) || 0,
+                    link: edge?.node?.url,
+                    picture: edge?.node?.image?.uri,
+                    cursor: edge?.cursor,
+                    recent: albums.length,
+                });
             }
             let stop = onProgress?.(albums);
             if (stop) return albums;
@@ -515,6 +473,143 @@ export async function getAllAlbums({
             break;
         }
     }
+    return albums;
+}
+
+export async function getAllGroupAlbums({
+    groupId,
+    onProgress,
+    cursor = '',
+}: {
+    groupId: string;
+    onProgress?: (albums: IAlbum[]) => boolean | void;
+    cursor?: string;
+}) {
+    const albums: IAlbum[] = [];
+    while (true) {
+        try {
+            const res = await fetchGraphQl({
+                fb_api_req_friendly_name: 'GroupsCometMediaAlbumsTabGridQuery',
+                variables: {
+                    cursor,
+                    count: 8,
+                    scale: 2,
+                    id: groupId,
+                },
+                doc_id: '6894403247286675',
+            });
+            const json = JSON.parse(res);
+            console.log(json);
+            const { edges = [], page_info = {} } = json?.data?.node?.group_albums || {};
+            for (const edge of edges) {
+                const id = edge?.node?.id;
+                albums.push({
+                    id,
+                    type: 'album',
+                    name: edge?.node?.title?.text,
+                    count: (edge?.node?.photos?.count || 0) + (edge?.node?.video?.count || 0),
+                    link: edge?.node?.url,
+                    picture: edge?.node?.album_cover_focused_image?.image?.image?.uri,
+                    cursor: edge?.cursor,
+                    recent: albums.length,
+                });
+            }
+            let stop = onProgress?.(albums);
+            if (stop) return albums;
+
+            if (!page_info?.has_next_page) break;
+            cursor = page_info.end_cursor;
+        } catch (e) {
+            console.error(e);
+            break;
+        }
+    }
+    return albums;
+}
+
+export async function _getAllAlbums({ id, accessToken, onProgress, fromAlbumId }) {
+    const albums: IAlbum[] = [];
+    let after = fromAlbumId ? btoa(fromAlbumId) : '';
+    while (true) {
+        try {
+            const res = await fetchExtension(
+                `https://graph.facebook.com/v14.0/${id}?fields=albums.limit(100)${
+                    after ? `.after(${after})` : ''
+                }{type,name,count,link,picture{url}}&access_token=${accessToken}`
+            );
+            const json = JSON.parse(res);
+            if (json.albums?.data?.length) {
+                for (const album of json.albums.data) {
+                    albums.push({
+                        id: album.id,
+                        type: album.type,
+                        name: album.name,
+                        count: album.count,
+                        link: album.link,
+                        picture: album.picture.data.url,
+                        recent: albums.length,
+                    });
+                }
+            }
+            let stop = onProgress?.(albums);
+            if (stop) return albums;
+
+            let nextAfter = json.albums?.paging?.cursors?.after;
+            if (!nextAfter || nextAfter === after) break;
+            after = nextAfter;
+        } catch (e) {
+            console.error(e);
+            break;
+        }
+    }
+    return albums;
+}
+
+export async function getAllAlbums({
+    id,
+    accessToken,
+    targetType = TargetType.User,
+    onProgress,
+    fromAlbumId = '',
+}: {
+    id: string;
+    accessToken: string;
+    targetType?: TargetType;
+    onProgress?: (albums: IAlbum[]) => boolean | void;
+    fromAlbumId?: string;
+}) {
+    const albums: IAlbum[] = [];
+    const albumIds = new Set();
+
+    const subOnProgress = _albums => {
+        for (let album of _albums) {
+            if (!albumIds.has(album?.id)) {
+                albums.push(album);
+                albumIds.add(album?.id);
+            }
+        }
+        return onProgress?.(albums);
+    };
+
+    // access_token way => can get timeline album
+    await _getAllAlbums({
+        id,
+        accessToken,
+        onProgress: subOnProgress,
+        fromAlbumId,
+    });
+
+    // graphql way
+    // TODO from cursor
+    targetType === TargetType.Group
+        ? await getAllGroupAlbums({
+              groupId: id,
+              onProgress: subOnProgress,
+          })
+        : await getAllUserAlbums({
+              uid: id,
+              onProgress: subOnProgress,
+          });
 
     return albums;
 }
@@ -575,7 +670,7 @@ export async function getAllVideos({
 }: {
     id: string;
     accessToken: string;
-    onProgress?: (videos: IVideo[]) => void;
+    onProgress?: (videos: IVideo[]) => boolean | void;
 }) {
     const videos: IVideo[] = [];
     const vidIds = new Set();

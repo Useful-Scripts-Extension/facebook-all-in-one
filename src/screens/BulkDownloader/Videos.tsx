@@ -2,31 +2,32 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Badge, Card, Image, List } from 'antd';
 import { ACCESS_TOKEN_TYPE, getAccessToken, getAllVideos, IVideo } from '../../utils/facebook';
 import { formatSeconds, limitString } from '../../utils/helper';
+import useForceStop from '../../hooks/useForceStop';
 
 export default function Videos({ targetId }: { targetId: string | undefined }) {
+    const forceStop = useForceStop();
     const [videos, setVideos] = useState([] as IVideo[]);
 
-    const stopLoadRef = useRef(false);
     useEffect(() => {
-        stopLoadRef.current = false;
-        return () => {
-            stopLoadRef.current = true;
-        };
-    }, []);
-
-    useEffect(() => {
-        if (targetId)
-            getAccessToken(ACCESS_TOKEN_TYPE.EAAB).then(accessToken =>
-                getAllVideos({
-                    id: targetId,
-                    accessToken,
-                    onProgress: _videos => {
-                        setVideos([..._videos]);
-                        return stopLoadRef.current;
-                    },
-                }).then(setVideos)
-            );
+        if (targetId) refresh();
     }, [targetId]);
+
+    const refresh = async () => {
+        let f = forceStop.start();
+
+        if (targetId) {
+            const accessToken = await getAccessToken(ACCESS_TOKEN_TYPE.EAAB);
+            const videos = await getAllVideos({
+                id: targetId,
+                accessToken,
+                onProgress: _videos => {
+                    setVideos([..._videos]);
+                    return f.value();
+                },
+            });
+            setVideos(videos);
+        }
+    };
 
     return (
         <List
@@ -37,7 +38,7 @@ export default function Videos({ targetId }: { targetId: string | undefined }) {
                 <List.Item>
                     <Card
                         hoverable={true}
-                        style={{ width: 300 }}
+                        style={{ width: 200 }}
                         cover={
                             <Badge.Ribbon text={formatSeconds(item.length)}>
                                 <Image
@@ -54,7 +55,7 @@ export default function Videos({ targetId }: { targetId: string | undefined }) {
                                         ),
                                         toolbarRender: () => null,
                                     }}
-                                    width={300}
+                                    width={200}
                                     height={200}
                                     style={{ objectFit: 'cover' }}
                                 />

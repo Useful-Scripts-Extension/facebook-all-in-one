@@ -1,35 +1,40 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, List } from 'antd';
 import { getAllPhotos, IUserPhoto, TargetType } from '../../utils/facebook';
+import useForceStop from '../../hooks/useForceStop';
 
 export default function Photos({
     targetId,
     targetType,
 }: {
-    targetId: string | undefined;
-    targetType: TargetType | undefined;
+    targetId?: string;
+    targetType?: TargetType;
 }) {
+    const forceStop = useForceStop();
     const [photos, setPhotos] = useState([] as IUserPhoto[]);
 
-    const stopLoadRef = useRef(false);
     useEffect(() => {
-        stopLoadRef.current = false;
-        return () => {
-            stopLoadRef.current = true;
-        };
-    }, []);
-
-    useEffect(() => {
-        if (targetId && targetType)
-            getAllPhotos({
-                targetType: targetType,
-                id: targetId,
-                onProgress: _photos => {
-                    setPhotos([..._photos]);
-                    return stopLoadRef.current;
-                },
-            }).then(setPhotos);
+        if (targetId && targetType) refresh();
     }, [targetId, targetType]);
+
+    const refresh = async () => {
+        const f = forceStop.start();
+        if (targetId) {
+            try {
+                const photos = await getAllPhotos({
+                    targetType,
+                    id: targetId,
+                    onProgress: _photos => {
+                        setPhotos([..._photos]);
+                        return f.value();
+                    },
+                });
+                setPhotos(photos);
+            } catch (error) {
+                console.error(error);
+            }
+        }
+    };
 
     return (
         <List

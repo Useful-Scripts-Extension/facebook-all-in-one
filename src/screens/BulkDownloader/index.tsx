@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Space, Tabs, TabsProps, Input, Tooltip, Card, Avatar } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { getEntityAbout, IEntityAbout, searchUser, TargetType } from '../../utils/facebook';
+import { useDebounceCallback } from 'usehooks-ts';
 
 const Albums = React.lazy(() => import('./Albums'));
 const Videos = React.lazy(() => import('./Videos'));
@@ -21,21 +22,22 @@ export default function BulkDownloader() {
     const [selectedTab, setSelectedTab] = useState(TabKey.Photos);
     const [about, setAbout] = useState(null as IEntityAbout | null);
     const [targetId, setTargetId] = useState('100050164073708');
-    const [searching, setSearching] = useState(false);
 
     const targetType = about?.type || TargetType.User;
 
-    const onSearch = async () => {
-        setSearching(true);
-        try {
-            const about = await getEntityAbout(targetId);
-            console.log(about);
-            setAbout(about);
-        } catch (e) {
-            alert('Error: ' + e.message);
-        } finally {
-            setSearching(false);
-        }
+    useEffect(() => {
+        const timeout = setTimeout(onSearch, 500);
+        return () => clearTimeout(timeout);
+    }, [targetId]);
+
+    const onSearch = () => {
+        getEntityAbout(targetId)
+            .then(about => {
+                if (about) {
+                    setAbout(about);
+                }
+            })
+            .catch(e => console.log(e));
     };
 
     const onChangeTab = key => {
@@ -56,7 +58,7 @@ export default function BulkDownloader() {
         {
             key: TabKey.Albums,
             label: 'Albums',
-            children: <Albums targetId={about?.id} />,
+            children: <Albums targetId={about?.id} targetType={about?.type} />,
         },
     ];
 
@@ -81,12 +83,12 @@ export default function BulkDownloader() {
                     style={{ width: 350 }}
                     onChange={e => setTargetId(e.target.value)}
                     onSearch={onSearch}
-                    enterButton={
-                        <Tooltip title={searching ? t('Stop') : t('Start')}>
-                            <i className="fa-solid fa-wand-magic-sparkles"></i>
-                        </Tooltip>
-                    }
-                    loading={searching}
+                    // enterButton={
+                    //     <Tooltip title={searching ? t('Stop') : t('Start')}>
+                    //         <i className="fa-solid fa-wand-magic-sparkles"></i>
+                    //     </Tooltip>
+                    // }
+                    // loading={searching}
                 />
 
                 {/* render about :id, url,avatar, name */}
