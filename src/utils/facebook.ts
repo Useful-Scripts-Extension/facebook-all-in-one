@@ -53,7 +53,7 @@ export function wrapGraphQlParams(params = {}) {
 }
 
 export async function trackEvent(scriptId: string) {
-    // return;
+    return;
     const text = await fetchExtension('https://useful-script-statistic.glitch.me/count', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -351,7 +351,8 @@ export async function getAllPhotos({ id, onProgress }) {
             const res = await getUserPhotos({ id, cursor });
             if (res?.photos?.length) {
                 photos.push(...res.photos);
-                onProgress?.(photos);
+                let stop = onProgress?.(photos);
+                if (stop) break;
             }
             if (!res?.page_info?.has_next_page) break;
             cursor = res.page_info.end_cursor;

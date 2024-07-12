@@ -98,7 +98,7 @@ export default function BulkDownloader() {
                         setAlbums([..._albums]);
                         return stopLoadRef.current;
                     },
-                }),
+                }).then(setAlbums),
                 getAllVideos({
                     id: targetId,
                     accessToken,
@@ -106,7 +106,7 @@ export default function BulkDownloader() {
                         setVideos([..._videos]);
                         return stopLoadRef.current;
                     },
-                }),
+                }).then(setVideos),
                 getAllPhotos({
                     id: targetId,
                     onProgress: _photos => {
@@ -114,7 +114,7 @@ export default function BulkDownloader() {
                         console.log(_photos.length, stopLoadRef.current);
                         return stopLoadRef.current;
                     },
-                }),
+                }).then(setPhotos),
             ]);
         } catch (e) {
             alert('Error: ' + e);

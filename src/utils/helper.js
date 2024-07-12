@@ -50,3 +50,23 @@ export function formatNumberWithCommas(x) {
     if (!x) return 0;
     return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
+
+export function limitString(str, len) {
+    if (!str) return '';
+    if (str.length <= len) return str;
+    return str.slice(0, len) + '...';
+}
+
+export function formatSeconds(seconds) {
+    // return hh:mm:ss
+    let hh = Math.floor(seconds / 3600);
+    let mm = Math.floor((seconds % 3600) / 60);
+    let ss = Math.floor((seconds % 3600) % 60);
+    let str = '';
+    if (hh > 0) str += `${hh}:`;
+    if (mm < 10) str += `0${mm}:`;
+    else str += `${mm}:`;
+    if (ss < 10) str += `0${ss}`;
+    else str += `${ss}`;
+    return str;
+}

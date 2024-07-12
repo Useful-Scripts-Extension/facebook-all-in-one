@@ -1,74 +1,51 @@
 import React from 'react';
-import { TableProps, Image } from 'antd';
-import MyTable from '../../components/MyTable';
+import { Badge, Card, Image, List } from 'antd';
 import { IVideo } from '../../utils/facebook';
+import { formatSeconds, limitString } from '../../utils/helper';
 
 export default function Videos({ videos }: { videos: IVideo[] }) {
-    const columns: TableProps['columns'] = [
-        {
-            title: '#',
-            dataIndex: 'recent',
-            key: 'recent',
-            render: (value, record, index) => record.recent + 1,
-            sorter: (a, b) => a.recent - b.recent,
-        },
-        {
-            title: 'ID',
-            dataIndex: 'id',
-            key: 'id',
-            sorter: (a, b) => a.id - b.id,
-        },
-        {
-            title: 'Description',
-            dataIndex: 'description',
-            key: 'description',
-            render: (text, record, index) => (
-                <a href={'https:/fb.com/' + record.post_id} target="_blank">
-                    {text}
-                </a>
-            ),
-            sorter: (a, b) => a.name.localeCompare(b.name),
-        },
-        {
-            title: 'Length',
-            dataIndex: 'length',
-            key: 'length',
-            sorter: (a, b) => a.length - b.length,
-        },
-        {
-            title: 'Video',
-            dataIndex: 'picture',
-            key: 'picture',
-            render: (value, record, index) => (
-                <Image
-                    src={record?.picture}
-                    style={{
-                        height: 100,
-                        width: 100,
-                        objectFit: 'cover',
-                    }}
-                />
-            ),
-        },
-        {
-            title: 'Action',
-            dataIndex: 'action',
-            key: 'action',
-            render: (value, record, index) => (
-                <a href={record.link} target="_blank">
-                    Download
-                </a>
-            ),
-        },
-    ];
-
     return (
-        <MyTable
-            data={videos}
-            columns={columns}
-            searchable
-            selectable
-            keyExtractor={video => video.id}
+        <List
+            pagination={{ showTotal: total => `Total ${total} videos`, defaultPageSize: 20 }}
+            grid={{ gutter: 10 }}
+            dataSource={videos}
+            renderItem={item => (
+                <List.Item>
+                    <Card
+                        hoverable={true}
+                        style={{ width: 300 }}
+                        cover={
+                            <Badge.Ribbon text={formatSeconds(item.length) + 's'}>
+                                <Image
+                                    src={item.picture}
+                                    preview={{
+                                        destroyOnClose: true,
+                                        imageRender: () => (
+                                            <video
+                                                autoPlay
+                                                controls
+                                                src={item.source}
+                                                style={{ maxWidth: '90%', maxHeight: '90%' }}
+                                            />
+                                        ),
+                                        toolbarRender: () => null,
+                                    }}
+                                    width={300}
+                                    height={200}
+                                    style={{ objectFit: 'cover' }}
+                                />
+                            </Badge.Ribbon>
+                        }
+                        actions={[
+                            <a href={'https://fb.com/' + item.post_id} target="_blank">
+                                <i className="fa-solid fa-up-right-from-square"></i>
+                            </a>,
+                        ]}
+                    >
+                        <Card.Meta title={limitString(item.description, 50)} />
+                    </Card>
+                </List.Item>
+            )}
         />
     );
 }
