@@ -15,7 +15,7 @@ export default function Videos({ videos }: { videos: IVideo[] }) {
                         hoverable={true}
                         style={{ width: 300 }}
                         cover={
-                            <Badge.Ribbon text={formatSeconds(item.length) + 's'}>
+                            <Badge.Ribbon text={formatSeconds(item.length)}>
                                 <Image
                                     src={item.picture}
                                     preview={{

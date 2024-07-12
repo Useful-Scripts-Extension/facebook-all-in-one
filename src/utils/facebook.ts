@@ -147,7 +147,14 @@ export function getUserAvatarFromUid(uid: string, size = 500) {
     return `https://graph.facebook.com/${uid}/picture?height=${size}&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
 }
 
-export async function getHoverCard(entityID: string, context = 'DEFAULT') {
+export type IEntityAbout = {
+    type: TargetType;
+    id: string;
+    name: string;
+    avatar: string;
+    url: string;
+};
+export async function getHoverCard(entityID: string, context = 'DEFAULT'): Promise<IEntityAbout> {
     let res = await fetchGraphQl({
         fb_api_req_friendly_name: 'CometHovercardQueryRendererQuery',
         variables: {
@@ -160,7 +167,24 @@ export async function getHoverCard(entityID: string, context = 'DEFAULT') {
         doc_id: '7257793420991802',
     });
 
-    return JSON.parse(res);
+    const json = JSON.parse(res);
+    console.log(json);
+    const node = json.data.node;
+    const type = node.__typename.toLowerCase();
+    const card = node.comet_hovercard_renderer[type];
+
+    return {
+        type:
+            type === 'user'
+                ? card.profile_plus_transition_path?.startsWith('PAGE')
+                    ? TargetType.Page
+                    : TargetType.User
+                : TargetType.Group,
+        id: node.id || card.id,
+        name: card.name,
+        avatar: card.profile_picture.uri,
+        url: card.profile_url || card.url,
+    };
 }
 
 export type UserInfoObject = {
@@ -343,12 +367,20 @@ export async function getGroupPhotos({ id, count = 8, cursor = '' }) {
     };
 }
 
-export async function getAllPhotos({ id, onProgress }) {
+export enum TargetType {
+    User = 'user',
+    Page = 'page',
+    Group = 'group',
+}
+export async function getAllPhotos({ id, onProgress, targetType = TargetType.User }) {
     const photos = [];
     let cursor = '';
     while (true) {
         try {
-            const res = await getUserPhotos({ id, cursor });
+            const res =
+                targetType === TargetType.Group
+                    ? await getGroupPhotos({ id, cursor })
+                    : await getUserPhotos({ id, cursor });
             if (res?.photos?.length) {
                 photos.push(...res.photos);
                 let stop = onProgress?.(photos);
@@ -487,6 +519,35 @@ export async function getAllVideos({
 // variables: {"count":14,"cursor":"ZmJpZDo1MjU3MDAyMDQxNTcxNDc=","renderLocation":"permalink","scale":2,"id":"489823451078156"}
 // server_timestamps: true
 // doc_id: 8142948395762884
+
+// largest photo
+const a = {
+    fb_api_req_friendly_name: 'CometPhotoRootContentQuery',
+    variables: {
+        UFI2CommentsProvider_commentsKey: 'CometPhotoRootQuery',
+        displayCommentsContextEnableComment: null,
+        displayCommentsContextIsAdPreview: null,
+        displayCommentsContextIsAggregatedShare: null,
+        displayCommentsContextIsStorySet: null,
+        displayCommentsFeedbackContext: null,
+        feedbackSource: 65,
+        feedLocation: 'COMET_MEDIA_VIEWER',
+        focusCommentID: null,
+        isMediaset: true,
+        mediasetToken: 'g.1154059318582088',
+        nodeID: '2550177295153855',
+        privacySelectorRenderLocation: 'COMET_MEDIA_VIEWER',
+        renderLocation: 'permalink',
+        scale: 2,
+        useDefaultActor: false,
+        useHScroll: false,
+        __relay_internal__pv__CometUFIReactionEnableShortNamerelayprovider: true,
+        __relay_internal__pv__CometUFIShareActionMigrationrelayprovider: false,
+        __relay_internal__pv__CometUFIReactionsEnableShortNamerelayprovider: false,
+        __relay_internal__pv__CometImmersivePhotoCanUserDisable3DMotionrelayprovider: false,
+    },
+    doc_id: '7830475950340566',
+};
 
 // #endregion
 

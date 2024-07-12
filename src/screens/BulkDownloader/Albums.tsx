@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Image, List } from 'antd';
+import { Badge, Card, Image, List } from 'antd';
 import { IAlbum } from '../../utils/facebook';
 import { formatNumberWithCommas } from '../../utils/helper';
 
@@ -15,14 +15,16 @@ export default function Albums({ albums }: { albums: IAlbum[] }) {
                         hoverable={true}
                         style={{ width: 200 }}
                         cover={
-                            <Image
-                                src={item.picture?.data?.url}
-                                // preview={{ src: item.image }}
-                                alt={item.name}
-                                width={200}
-                                height={200}
-                                style={{ objectFit: 'cover' }}
-                            />
+                            <Badge.Ribbon text={formatNumberWithCommas(item.count)}>
+                                <Image
+                                    src={item.picture?.data?.url}
+                                    // preview={{ src: item.image }}
+                                    alt={item.name}
+                                    width={200}
+                                    height={200}
+                                    style={{ objectFit: 'cover' }}
+                                />
+                            </Badge.Ribbon>
                         }
                         actions={[
                             <a href={item.link} target="_blank">
@@ -30,10 +32,7 @@ export default function Albums({ albums }: { albums: IAlbum[] }) {
                             </a>,
                         ]}
                     >
-                        <Card.Meta
-                            title={item.name}
-                            description={formatNumberWithCommas(item.count) + ' items'}
-                        />
+                        <Card.Meta title={item.name} />
                     </Card>
                 </List.Item>
             )}
