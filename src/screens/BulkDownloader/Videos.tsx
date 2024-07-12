@@ -7,6 +7,12 @@ export default function Videos({ targetId }: { targetId: string | undefined }) {
     const [videos, setVideos] = useState([] as IVideo[]);
 
     const stopLoadRef = useRef(false);
+    useEffect(() => {
+        stopLoadRef.current = false;
+        return () => {
+            stopLoadRef.current = true;
+        };
+    }, []);
 
     useEffect(() => {
         if (targetId)

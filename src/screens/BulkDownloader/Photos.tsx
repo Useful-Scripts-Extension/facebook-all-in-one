@@ -12,6 +12,12 @@ export default function Photos({
     const [photos, setPhotos] = useState([] as IUserPhoto[]);
 
     const stopLoadRef = useRef(false);
+    useEffect(() => {
+        stopLoadRef.current = false;
+        return () => {
+            stopLoadRef.current = true;
+        };
+    }, []);
 
     useEffect(() => {
         if (targetId && targetType)
@@ -38,7 +44,7 @@ export default function Photos({
                         alt={item.accessibility_caption}
                         width={150}
                         height={150}
-                        style={{ objectFit: 'cover' }}
+                        style={{ objectFit: 'cover', borderRadius: '10px' }}
                     />
                 </List.Item>
             )}

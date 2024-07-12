@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Space, Tabs, TabsProps, Input, Tooltip, Card, Avatar } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { getHoverCard, IEntityAbout, TargetType } from '../../utils/facebook';
+import { getEntityAbout, IEntityAbout, searchUser, TargetType } from '../../utils/facebook';
 
 const Albums = React.lazy(() => import('./Albums'));
 const Videos = React.lazy(() => import('./Videos'));
@@ -20,7 +20,7 @@ export default function BulkDownloader() {
 
     const [selectedTab, setSelectedTab] = useState(TabKey.Photos);
     const [about, setAbout] = useState(null as IEntityAbout | null);
-    const [targetId, setTargetId] = useState('100064840322550');
+    const [targetId, setTargetId] = useState('100050164073708');
     const [searching, setSearching] = useState(false);
 
     const targetType = about?.type || TargetType.User;
@@ -28,7 +28,7 @@ export default function BulkDownloader() {
     const onSearch = async () => {
         setSearching(true);
         try {
-            const about = await getHoverCard(targetId);
+            const about = await getEntityAbout(targetId);
             console.log(about);
             setAbout(about);
         } catch (e) {
