@@ -7,6 +7,6 @@ export default defineConfig({
     base: '', // https://stackoverflow.com/a/69746868/23648002
     root: './src',
     build: {
-        outDir: 'dist',
+        outDir: '../dist',
     },
 });
