@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Button, List, Space, Tooltip } from 'antd';
-import InfiniteScroll from 'react-infinite-scroll-component';
+import { Button, Image, List, Space, Tooltip } from 'antd';
+import InfiniteScroll from './InfiniteScroll';
 
 export default function Collection<T>({
     renderItem,
@@ -13,50 +13,24 @@ export default function Collection<T>({
     const [data, setData] = useState([] as T[]);
 
     useEffect(() => {
-        next();
+        setData([]);
+        next([]);
     }, [fetchNext]);
 
-    const loadingRef = useRef(false);
-    const next = async () => {
-        if (loadingRef.current) return;
-        loadingRef.current = true;
-        console.log('local fetch next');
+    const fetchingRef = useRef(false);
+    const next = async (curData = data) => {
+        if (fetchingRef.current) return;
+        fetchingRef.current = true;
 
-        const res = await fetchNext(data);
+        const res = await fetchNext(curData);
         console.log(res);
         if (res?.length) {
-            setData([...data, ...res]);
+            setData([...curData, ...res]);
             setHasMore(true);
         } else if (res?.length === 0) {
             setHasMore(false);
         }
-        loadingRef.current = false;
-    };
-
-    const renderInfiniteScroll = () => {
-        return (
-            <InfiniteScroll
-                dataLength={data.length} //This is important field to render the next data
-                next={next}
-                hasMore={hasMore}
-                loader={
-                    <Space style={{ display: 'flex', justifyContent: 'center' }}>
-                        <Tooltip title={'Click to load'}>
-                            <Button onClick={next}>
-                                <i className="fa-solid fa-spinner fa-spin fa-lg"></i>
-                            </Button>
-                        </Tooltip>
-                    </Space>
-                }
-                endMessage={
-                    <p style={{ textAlign: 'center' }}>
-                        <b>Yay! You have seen it all</b>
-                    </p>
-                }
-            >
-                <List grid={{ gutter: 10 }} dataSource={data} renderItem={renderItem} />
-            </InfiniteScroll>
-        );
+        fetchingRef.current = false;
     };
 
     return (
@@ -69,7 +43,29 @@ export default function Collection<T>({
                 // overflowX: 'hidden',
             }}
         >
-            {renderInfiniteScroll()}
+            <InfiniteScroll
+                disabled={false}
+                next={() => next()}
+                hasNext={hasMore}
+                loader={
+                    <Space style={{ display: 'flex', justifyContent: 'center' }}>
+                        <Tooltip title={'Click to load'}>
+                            <Button onClick={() => next()}>
+                                <i className="fa-solid fa-spinner fa-spin fa-lg"></i>
+                            </Button>
+                        </Tooltip>
+                    </Space>
+                }
+                endMessage={
+                    <p style={{ textAlign: 'center' }}>
+                        <b>Yay! You have seen it all</b>
+                    </p>
+                }
+            >
+                <Image.PreviewGroup>
+                    <List grid={{ gutter: 10 }} dataSource={data} renderItem={renderItem} />
+                </Image.PreviewGroup>
+            </InfiniteScroll>
         </Space>
     );
 }

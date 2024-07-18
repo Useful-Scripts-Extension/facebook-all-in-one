@@ -53,7 +53,7 @@ export function wrapGraphQlParams(params = {}) {
 }
 
 export async function trackEvent(scriptId: string) {
-    return;
+    // return;
     const text = await fetchExtension('https://useful-script-statistic.glitch.me/count', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -158,6 +158,7 @@ export type IEntityAbout = {
     name: string;
     avatar: string;
     url: string;
+    raw: any;
 };
 export async function getEntityAbout(entityID: string, context = 'DEFAULT'): Promise<IEntityAbout> {
     let res = await fetchGraphQl({
@@ -188,6 +189,7 @@ export async function getEntityAbout(entityID: string, context = 'DEFAULT'): Pro
         name: card.name,
         avatar: card.profile_picture.uri,
         url: card.profile_url || card.url,
+        raw: json,
     };
 }
 
@@ -639,6 +641,24 @@ export async function getAllAlbums({
     return albums;
 }
 
+export type IAlbumPhoto = {
+    id: string;
+    image: string;
+};
+export async function getAlbumPhoto({
+    albumId,
+    accessToken = '',
+    cursor = '',
+}): Promise<IAlbumPhoto[]> {
+    // cursor btoa(id)
+    let url = `https://graph.facebook.com/v14.0/${albumId}/photos?fields=largest_image&limit=100&access_token=${accessToken}`;
+    if (cursor) url += `&after=${cursor}`;
+
+    const res = await fetchExtension(url);
+    const json = JSON.parse(res);
+    return json?.data?.map(_ => ({ id: _.id, image: _.largest_image.source })) || [];
+}
+
 // album photos
 // fb_api_req_friendly_name: CometAlbumPhotoCollagePaginationQuery
 // variables: {"count":14,"cursor":"ZmJpZDo1MjU3MDAyMDQxNTcxNDc=","renderLocation":"permalink","scale":2,"id":"489823451078156"}
@@ -1012,7 +1032,7 @@ export async function getMessagesAtTimeCursor({
 
 export async function checkCanMessage(targetUid) {
     const res = await getEntityAbout(targetUid);
-    return res?.data?.node?.comet_hovercard_renderer?.user?.primaryActions?.find(
+    return res.raw?.data?.node?.comet_hovercard_renderer?.user?.primaryActions?.find(
         _ => _?.profile_action_type == 'MESSAGE'
     );
 }

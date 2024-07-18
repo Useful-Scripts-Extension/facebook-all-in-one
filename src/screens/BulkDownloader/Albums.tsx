@@ -13,9 +13,11 @@ import Collection from '../../components/Collection';
 export default function Albums({
     targetId,
     targetType,
+    onOpenAlbum,
 }: {
     readonly targetId?: string;
     readonly targetType?: TargetType;
+    readonly onOpenAlbum?: (album: IAlbum) => void;
 }) {
     const fetchNext = useCallback(
         async (currentData: IAlbum[] = []) => {
@@ -42,6 +44,9 @@ export default function Albums({
                             height={150}
                             style={{ objectFit: 'cover', borderRadius: '10px' }}
                             preview={false}
+                            onClick={() => {
+                                onOpenAlbum?.(item);
+                            }}
                         />
                     </Badge.Ribbon>
                     <Typography.Paragraph

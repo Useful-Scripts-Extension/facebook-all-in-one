@@ -26,6 +26,7 @@ import {
     trackEvent,
 } from '../../utils/facebook';
 import useStore, { selectors } from '../../store';
+import InfiniteScroll from '../../components/InfiniteScroll';
 
 const dateFormat = 'YYYY-MM-DD';
 const minDate = dayjs('2004-01-01', dateFormat);
@@ -311,43 +312,34 @@ export default function FirstMessages() {
     const renderMessages = () => {
         if (!messagesGrouped?.length) return null;
         return (
-            <List
-                header={
+            <InfiniteScroll
+                prev={fetchPrev}
+                next={fetchNext}
+                hasPrev={pagingState.hasPrev}
+                hasNext={pagingState.hasNext}
+                loader={
                     <Space style={{ display: 'flex', justifyContent: 'center' }}>
-                        <Button
-                            type="primary"
-                            onClick={fetchPrev}
-                            loading={pagingState.fetchingPrev}
-                            disabled={!pagingState.hasPrev}
-                        >
-                            {!pagingState.fetchingPrev && <i className="fas fa-arrow-up" />}
-                            {pagingState.hasPrev ? t('Fetch previous') : t('No more message')}
-                        </Button>
+                        <i className="fa-solid fa-spinner fa-spin fa-lg"></i>
                     </Space>
                 }
-                split={false}
-                dataSource={messagesGrouped}
-                renderItem={msg => (
-                    <MessageItem
-                        message={msg}
-                        myProfile={myProfile}
-                        friendProfile={friendProfile}
-                    />
-                )}
-                footer={
+                endMessage={
                     <Space style={{ display: 'flex', justifyContent: 'center' }}>
-                        <Button
-                            type="primary"
-                            onClick={fetchNext}
-                            loading={pagingState.fetchingNext}
-                            disabled={!pagingState.hasNext}
-                        >
-                            {!pagingState.fetchingNext && <i className="fas fa-arrow-down" />}
-                            {pagingState.hasNext ? t('Fetch next') : t('No more message')}
-                        </Button>
+                        {t('No more message')}
                     </Space>
                 }
-            />
+            >
+                <List
+                    split={false}
+                    dataSource={messagesGrouped}
+                    renderItem={msg => (
+                        <MessageItem
+                            message={msg}
+                            myProfile={myProfile}
+                            friendProfile={friendProfile}
+                        />
+                    )}
+                />
+            </InfiniteScroll>
         );
     };
 

@@ -1,12 +1,12 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Space, Tabs, TabsProps, Input, Tooltip, Card, Avatar } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Space, Tabs, TabsProps, Input, Card, Avatar } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { getEntityAbout, IEntityAbout, searchUser, TargetType } from '../../utils/facebook';
-import { useDebounceCallback } from 'usehooks-ts';
+import { getEntityAbout, IAlbum, IEntityAbout, TargetType } from '../../utils/facebook';
 
 const Albums = React.lazy(() => import('./Albums'));
 const Videos = React.lazy(() => import('./Videos'));
 const Photos = React.lazy(() => import('./Photos'));
+const Album = React.lazy(() => import('./Album'));
 
 const { Search } = Input;
 
@@ -14,12 +14,28 @@ const enum TabKey {
     Albums = 'Albums',
     Videos = 'Videos',
     Photos = 'Photos',
+    Album = 'Album-',
 }
+
+type Tab = {
+    key: string;
+    label: string;
+    closable?: boolean;
+    props?: any;
+};
+
+const DefaultTabs: Tab[] = [
+    { key: TabKey.Photos, label: TabKey.Photos, closable: false },
+    { key: TabKey.Videos, label: TabKey.Videos, closable: false },
+    { key: TabKey.Albums, label: TabKey.Albums, closable: false },
+];
 
 export default function BulkDownloader() {
     const { t } = useTranslation();
 
-    const [selectedTab, setSelectedTab] = useState(TabKey.Photos);
+    const [activeKey, setActiveKey] = useState<string>('');
+    const [tabs, setTabs] = useState(DefaultTabs);
+    const [loading, setLoading] = useState(false);
     const [about, setAbout] = useState(null as IEntityAbout | null);
     const [targetId, setTargetId] = useState('100050164073708');
 
@@ -31,36 +47,81 @@ export default function BulkDownloader() {
     }, [targetId]);
 
     const onSearch = () => {
+        setLoading(true);
         getEntityAbout(targetId)
-            .then(about => {
-                if (about) {
-                    setAbout(about);
-                }
+            .then(data => {
+                setAbout(data);
+                setTabs(DefaultTabs);
+                // setActiveKey(DefaultTabs[0].key);
             })
-            .catch(e => console.log(e));
+            .catch(e => console.log(e))
+            .finally(() => setLoading(false));
     };
 
     const onChangeTab = key => {
-        setSelectedTab(key);
+        setActiveKey(key);
     };
 
-    const tabItems: TabsProps['items'] = [
-        {
-            key: TabKey.Photos,
-            label: 'Photos',
-            children: <Photos targetId={about?.id} targetType={about?.type} />,
-        },
-        {
-            key: TabKey.Videos,
-            label: 'Videos',
-            children: <Videos targetId={about?.id} />,
-        },
-        {
-            key: TabKey.Albums,
-            label: 'Albums',
-            children: <Albums targetId={about?.id} targetType={about?.type} />,
-        },
-    ];
+    const onEdit = (
+        targetKey: React.MouseEvent | React.KeyboardEvent | string,
+        action: 'add' | 'remove'
+    ) => {
+        if (action === 'remove') {
+            let newActiveKey = activeKey;
+            let lastIndex = -1;
+            tabs.forEach((item, i) => {
+                if (item.key === targetKey) {
+                    lastIndex = i - 1;
+                }
+            });
+            const newPanes = tabs.filter(item => item.key !== targetKey);
+            if (newPanes.length && newActiveKey === targetKey) {
+                if (lastIndex >= 0) {
+                    newActiveKey = newPanes[lastIndex].key;
+                } else {
+                    newActiveKey = newPanes[0].key;
+                }
+            }
+            setTabs(newPanes);
+            setActiveKey(newActiveKey);
+        }
+    };
+
+    const onOpenAlbum = (album: IAlbum) => {
+        let tabKey = TabKey.Album + album.id;
+        setTabs(prev => [
+            ...prev,
+            {
+                key: tabKey,
+                label: 'Album: ' + album.name,
+                closable: true,
+                props: {
+                    album,
+                },
+            },
+        ]);
+        setActiveKey(tabKey);
+    };
+
+    const tabItems: TabsProps['items'] = tabs.map(tab => {
+        const comp =
+            tab.key === TabKey.Photos ? (
+                <Photos targetId={about?.id} targetType={about?.type} />
+            ) : tab.key === TabKey.Videos ? (
+                <Videos targetId={about?.id} />
+            ) : tab.key === TabKey.Albums ? (
+                <Albums targetId={about?.id} targetType={about?.type} onOpenAlbum={onOpenAlbum} />
+            ) : tab.key.startsWith(TabKey.Album) ? (
+                <Album album={tab.props?.album} />
+            ) : null;
+
+        return {
+            key: tab.key,
+            label: tab.label,
+            closable: tab.closable,
+            children: comp,
+        };
+    });
 
     return (
         <Space style={{ width: '100%', height: '100%' }} direction="vertical">
@@ -83,12 +144,10 @@ export default function BulkDownloader() {
                     style={{ width: 350 }}
                     onChange={e => setTargetId(e.target.value)}
                     onSearch={onSearch}
-                    // enterButton={
-                    //     <Tooltip title={searching ? t('Stop') : t('Start')}>
-                    //         <i className="fa-solid fa-wand-magic-sparkles"></i>
-                    //     </Tooltip>
-                    // }
-                    // loading={searching}
+                    enterButton={
+                        loading ? null : <i className="fa-solid fa-wand-magic-sparkles"></i>
+                    }
+                    loading={loading}
                 />
 
                 {/* render about :id, url,avatar, name */}
@@ -123,7 +182,16 @@ export default function BulkDownloader() {
                 ) : null}
             </Space>
 
-            <Tabs defaultActiveKey={selectedTab} centered items={tabItems} onChange={onChangeTab} />
+            <Tabs
+                defaultActiveKey={activeKey}
+                activeKey={activeKey}
+                type="editable-card"
+                centered
+                hideAdd
+                items={tabItems}
+                onChange={onChangeTab}
+                onEdit={onEdit}
+            />
         </Space>
     );
 }
