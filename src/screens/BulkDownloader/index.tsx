@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Space, Tabs, TabsProps, Input, Card, Avatar } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { getEntityAbout, IAlbum, IEntityAbout, TargetType } from '../../utils/facebook';
+import { getEntityAbout, IAlbum, IEntityAbout, TargetType, trackEvent } from '../../utils/facebook';
 
 const Albums = React.lazy(() => import('./Albums'));
 const Videos = React.lazy(() => import('./Videos'));
@@ -47,6 +47,7 @@ export default function BulkDownloader() {
     }, [targetId]);
 
     const onSearch = () => {
+        trackEvent('BulkDownloader:onSearch');
         setLoading(true);
         getEntityAbout(targetId)
             .then(data => {
@@ -59,6 +60,7 @@ export default function BulkDownloader() {
     };
 
     const onChangeTab = key => {
+        trackEvent('BulkDownloader:onChangeTab:' + key);
         setActiveKey(key);
     };
 
@@ -89,6 +91,7 @@ export default function BulkDownloader() {
 
     const onOpenAlbum = (album: IAlbum) => {
         let tabKey = TabKey.Album + album.id;
+        trackEvent('BulkDownloader:onOpenAlbum');
         setTabs(prev => [
             ...prev,
             {

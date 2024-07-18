@@ -1,5 +1,5 @@
 import { App } from 'antd';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { useIntersectionObserver, useInterval } from 'usehooks-ts';
 
 export default function InfiniteScroll({
@@ -33,13 +33,13 @@ export default function InfiniteScroll({
     useInterval(() => {
         checkFetchNext();
         checkFetchPrev();
-    }, 500);
+    }, 1000);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         checkFetchNext();
     }, [nextInView]);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         checkFetchPrev();
     }, [prevInView]);
 
