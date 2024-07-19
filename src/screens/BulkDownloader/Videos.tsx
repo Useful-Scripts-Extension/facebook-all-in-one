@@ -17,6 +17,13 @@ export default function Videos({ targetId }: { readonly targetId: string | undef
         [targetId]
     );
 
+    const downloadItem = useCallback((item: IVideo) => {
+        return {
+            url: item.source,
+            name: item.id + '.mp4',
+        };
+    }, []);
+
     const renderItem = useCallback((item: IVideo) => {
         return (
             <List.Item>
@@ -44,5 +51,13 @@ export default function Videos({ targetId }: { readonly targetId: string | undef
         );
     }, []);
 
-    return <Collection fetchNext={fetchNext} renderItem={renderItem} />;
+    return (
+        <Collection
+            collectionName="Videos"
+            fetchNext={fetchNext}
+            renderItem={renderItem}
+            downloadItem={downloadItem}
+            rowKey={item => item.id}
+        />
+    );
 }

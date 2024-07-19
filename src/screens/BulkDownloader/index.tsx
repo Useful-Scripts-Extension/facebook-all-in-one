@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Space, Tabs, TabsProps, Input, Card, Avatar } from 'antd';
+import { Space, Tabs, TabsProps, Input, Card, Avatar, FloatButton } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { getEntityAbout, IAlbum, IEntityAbout, TargetType, trackEvent } from '../../utils/facebook';
 
@@ -41,10 +41,10 @@ export default function BulkDownloader() {
 
     const targetType = about?.type || TargetType.User;
 
-    useEffect(() => {
-        const timeout = setTimeout(onSearch, 500);
-        return () => clearTimeout(timeout);
-    }, [targetId]);
+    // useEffect(() => {
+    //     const timeout = setTimeout(onSearch, 500);
+    //     return () => clearTimeout(timeout);
+    // }, [targetId]);
 
     const onSearch = () => {
         trackEvent('BulkDownloader:onSearch');
@@ -195,6 +195,8 @@ export default function BulkDownloader() {
                 onChange={onChangeTab}
                 onEdit={onEdit}
             />
+
+            <FloatButton.BackTop />
         </Space>
     );
 }

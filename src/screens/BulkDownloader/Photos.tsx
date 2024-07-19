@@ -37,5 +37,20 @@ export default function Photos({
         );
     }, []);
 
-    return <Collection fetchNext={fetchNext} renderItem={renderItem} />;
+    const downloadItem = useCallback((item: IUserPhoto, index: number) => {
+        return {
+            url: item.image,
+            name: item.id + '.jpg',
+        };
+    }, []);
+
+    return (
+        <Collection
+            collectionName="Photos"
+            fetchNext={fetchNext}
+            renderItem={renderItem}
+            downloadItem={downloadItem}
+            rowKey={item => item.id}
+        />
+    );
 }

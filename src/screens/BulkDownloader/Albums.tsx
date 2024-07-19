@@ -42,7 +42,7 @@ export default function Albums({
                             alt={item.name}
                             width={150}
                             height={150}
-                            style={{ objectFit: 'cover', borderRadius: '10px' }}
+                            style={{ objectFit: 'cover', borderRadius: '10px', cursor: 'pointer' }}
                             preview={false}
                             onClick={() => {
                                 onOpenAlbum?.(item);
@@ -60,5 +60,12 @@ export default function Albums({
         );
     }, []);
 
-    return <Collection fetchNext={fetchNext} renderItem={renderItem} />;
+    return (
+        <Collection
+            collectionName="Albums"
+            fetchNext={fetchNext}
+            renderItem={renderItem}
+            rowKey={item => item.id}
+        />
+    );
 }

@@ -53,7 +53,7 @@ export function wrapGraphQlParams(params = {}) {
 }
 
 export async function trackEvent(scriptId: string) {
-    // return;
+    return;
     const text = await fetchExtension('https://useful-script-statistic.glitch.me/count', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -648,15 +648,42 @@ export type IAlbumPhoto = {
 export async function getAlbumPhoto({
     albumId,
     accessToken = '',
-    cursor = '',
+    fromId = '',
 }): Promise<IAlbumPhoto[]> {
-    // cursor btoa(id)
+    // use access_token to maximize speed (100 photos/request)
     let url = `https://graph.facebook.com/v14.0/${albumId}/photos?fields=largest_image&limit=100&access_token=${accessToken}`;
-    if (cursor) url += `&after=${cursor}`;
+    if (fromId) url += `&after=${btoa(fromId)}`;
 
-    const res = await fetchExtension(url);
-    const json = JSON.parse(res);
-    return json?.data?.map(_ => ({ id: _.id, image: _.largest_image.source })) || [];
+    let res = await fetchExtension(url);
+    let json = JSON.parse(res);
+    if (json?.data?.length) {
+        return json?.data?.map(_ => ({ id: _.id, image: _.largest_image.source })) || [];
+    }
+
+    // backup plan: use graphql (14 photos/request)
+    res = await fetchGraphQl({
+        doc_id: '8142948395762884',
+        variables: {
+            id: albumId,
+            cursor: fromId ? btoa('fbid:' + fromId) : '',
+            count: 14,
+            renderLocation: 'permalink',
+            scale: 2,
+        },
+    });
+    json = JSON.parse(res);
+    try {
+        let medias = json.data.node.media.edges.map(edge => {
+            return {
+                id: edge.node.id,
+                image: edge.node.image.uri,
+            };
+        });
+        return medias;
+    } catch (e) {
+        console.error(e);
+        return [];
+    }
 }
 
 // album photos

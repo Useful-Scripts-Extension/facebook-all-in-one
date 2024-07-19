@@ -24,7 +24,7 @@ export default function Album({
             const res = await getAlbumPhoto({
                 albumId: _albumId,
                 accessToken: await getAccessToken(ACCESS_TOKEN_TYPE.EAAB),
-                cursor: btoa(currentData[currentData.length - 1]?.id || ''),
+                fromId: currentData[currentData.length - 1]?.id || '',
             });
             return res;
         },
@@ -44,5 +44,20 @@ export default function Album({
         );
     }, []);
 
-    return <Collection fetchNext={fetchNext} renderItem={renderItem} />;
+    const downloadItem = useCallback((item: IAlbumPhoto) => {
+        return {
+            url: item.image,
+            name: item.id + '.jpg',
+        };
+    }, []);
+
+    return (
+        <Collection
+            collectionName={'Album ' + album.name}
+            fetchNext={fetchNext}
+            renderItem={renderItem}
+            downloadItem={downloadItem}
+            rowKey={item => item.id}
+        />
+    );
 }
