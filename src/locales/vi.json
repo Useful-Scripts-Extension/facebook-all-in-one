@@ -129,6 +129,29 @@
         "Find friends": "Tìm bạn bè",
         "Enter email or phone number": "Nhập email hoặc sđt",
 
-        "Bulk Downloader": "Tải hành loạt"
+        "Bulk Downloader": "Tải hành loạt",
+        "Enter id of user/page/group": "Nhập id của user/group/page",
+        "Download all": "Tải từ đầu",
+        "Download from cursor": "Tiếp tục tải",
+        "Last cursor": "Con trỏ cuối",
+        "leave empty to re-download all": "Bỏ trống để tải từ đầu",
+        "Last index": "Vị trí cuối",
+        "for auto generate file name": "để tự động tạo tên file",
+        "Start download": "Bắt đầu tải",
+        "Downloading": "Đang tải",
+        "No data at from your cursor": "Không có dữ liệu tại vị trí bạn nhập",
+        "Will download from start": "Sẽ tải từ đầu",
+        "Download stopped": "Đã dừng tải",
+        "Download finished": "Tải xong",
+        "Click to stop": "Bấm để dừng",
+        "Folder Name": "Tên thư mục",
+        "Downloaded": "Đã tải",
+        "Continue download": "Tiếp tục tải",
+        "Data type": "Dữ liệu tải xuống",
+        "Which data type you want to download?": "Bạn muốn tải dữ liệu gì?",
+        "Direct Download": "Tải trực tiếp",
+        "Only Links": "Chỉ tải link",
+        "Download failed": "Lỗi tải",
+        "Failed": "Lỗi"
     }
 }

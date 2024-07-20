@@ -1,17 +1,11 @@
 import React, { useEffect } from 'react';
-import { App, Layout, Menu, Space } from 'antd';
+import { App, Layout, Menu, Space, Spin } from 'antd';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import useStore, { selectors } from './store';
 import { getFbDtsg, getMyUid, getUserInfoFromUid, trackEvent } from './utils/facebook';
 import logo from './assets/logo.png';
-import {
-    LanguagePicker,
-    LoadingFullScreen,
-    ProfileHeader,
-    ThemeSwitcher,
-    ComingSoon,
-} from './components';
+import { LanguagePicker, ProfileHeader, ThemeSwitcher, ComingSoon } from './components';
 
 const { Header, Sider, Content, Footer } = Layout;
 
@@ -156,7 +150,7 @@ export default function MyApp() {
 
     return (
         <Layout style={{ minHeight: '100vh' }}>
-            {!hydrated && <LoadingFullScreen />}
+            <Spin spinning={!hydrated || !profile} fullscreen />
 
             <Sider collapsible width={250} breakpoint="lg">
                 <div
@@ -188,10 +182,8 @@ export default function MyApp() {
                 </Header>
 
                 <Content style={{ padding: '18px', position: 'relative' }}>
-                    {!profile ? (
-                        <LoadingFullScreen onlyFillContainer />
-                    ) : (
-                        <React.Suspense fallback={<LoadingFullScreen onlyFillContainer />}>
+                    {profile ? (
+                        <React.Suspense fallback={<Spin fullscreen spinning />}>
                             <Routes>
                                 {routes.map(route => (
                                     <Route
@@ -202,7 +194,7 @@ export default function MyApp() {
                                 ))}
                             </Routes>
                         </React.Suspense>
-                    )}
+                    ) : null}
                 </Content>
 
                 <Footer style={{ textAlign: 'center' }}>

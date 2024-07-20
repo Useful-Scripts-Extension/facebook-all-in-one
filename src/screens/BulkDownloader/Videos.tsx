@@ -1,23 +1,37 @@
 import React, { useCallback } from 'react';
-import { Badge, Image, List } from 'antd';
-import { getVideo, IVideo } from '../../utils/facebook';
+import { Badge, List, Spin } from 'antd';
+import {
+    getGroupVideo,
+    getUserVideo,
+    getVideoInfo,
+    IEntityAbout,
+    IVideo,
+    TargetType,
+} from '../../utils/facebook';
 import { formatSeconds } from '../../utils/helper';
 import Collection from '../../components/Collection';
+import ImageLazyPreview from '../../components/ImageLazyPreview';
 
-export default function Videos({ targetId }: { readonly targetId: string | undefined }) {
+export default function Videos({ target }: { readonly target: IEntityAbout | null }) {
     const fetchNext = useCallback(
-        async (currentData: IVideo[] = []) => {
-            if (!targetId) return;
-            const res = await getVideo({
-                id: targetId,
-                cursor: currentData?.[currentData?.length - 1]?.cursor || '',
-            });
+        async (currentData: IVideo[] = [], cursor?: string) => {
+            if (!target?.id || !target?.type) return;
+
+            cursor = cursor || currentData?.[currentData?.length - 1]?.cursor || '';
+            const res =
+                target?.type === TargetType.Group
+                    ? await getGroupVideo({ id: target?.id, cursor })
+                    : await getUserVideo({ id: target?.id, cursor });
             return res.videos;
         },
-        [targetId]
+        [target]
     );
 
-    const downloadItem = useCallback((item: IVideo) => {
+    const downloadItem = useCallback(async (item: IVideo) => {
+        if (!item.source) {
+            const videoInfo = await getVideoInfo(item.id);
+            item.source = videoInfo.source;
+        }
         return {
             url: item.source,
             name: item.id + '.mp4',
@@ -27,21 +41,31 @@ export default function Videos({ targetId }: { readonly targetId: string | undef
     const renderItem = useCallback((item: IVideo) => {
         return (
             <List.Item>
-                <Badge.Ribbon text={formatSeconds(item.length)}>
-                    <Image
+                <Badge.Ribbon text={item.length ? formatSeconds(item.length) : null}>
+                    <ImageLazyPreview
                         src={item.picture}
-                        preview={{
+                        defaultPreviewSrc={item.source}
+                        getPreview={() =>
+                            getVideoInfo(item.id).then(_ => {
+                                console.log(_);
+                                return _.source;
+                            })
+                        }
+                        renderPreview={(src, loading) => ({
                             destroyOnClose: true,
                             imageRender: () => (
-                                <video
-                                    autoPlay
-                                    controls
-                                    src={item.source}
-                                    style={{ maxWidth: '90%', maxHeight: '90%' }}
-                                />
+                                <Spin spinning={loading}>
+                                    <video
+                                        autoPlay
+                                        controls
+                                        loop
+                                        src={src}
+                                        style={{ maxWidth: '90vw', maxHeight: '90vh' }}
+                                    />
+                                </Spin>
                             ),
                             toolbarRender: () => null,
-                        }}
+                        })}
                         width={200}
                         height={200}
                         style={{ objectFit: 'cover' }}
@@ -53,7 +77,7 @@ export default function Videos({ targetId }: { readonly targetId: string | undef
 
     return (
         <Collection
-            collectionName="Videos"
+            collectionName={target?.name + ' - Videos'}
             fetchNext={fetchNext}
             renderItem={renderItem}
             downloadItem={downloadItem}

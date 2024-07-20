@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { App, Button, Image, List, Space } from 'antd';
+import { App, Button, List, Space } from 'antd';
 import { useIntersectionObserver, useInterval } from 'usehooks-ts';
 import { useTranslation } from 'react-i18next';
-import Swal from 'sweetalert2';
+import Swal, { SweetAlertResult } from 'sweetalert2';
 import { promiseAllStepN } from '../utils/helper';
 
 export type Downloadable = {
@@ -34,7 +34,7 @@ export default function Collection<T>({
 
     useEffect(() => {
         setData([]);
-        fetchNext([]);
+        next([]);
     }, [fetchNext]);
 
     // auto load more
@@ -70,93 +70,173 @@ export default function Collection<T>({
     const downloadAll = async (fromCursor?: string, startIndex = 0) => {
         if (!downloadItem) return;
 
-        // config
-        const config = await Swal.fire({
-            title: 'Config',
-            html: `
-                <label for="from-cursor">From Cursor: (let empty to download all)</label><br/>
-                <input id="from-cursor" class="swal2-input" style="margin: 5px" value="${
-                    fromCursor || ''
-                }">
-                <br/>
-                <label for="start-index">Start Index:</label><br/>
-                <input id="start-index" class="swal2-input" style="margin: 5px" value="${startIndex}">
-            `,
-            preConfirm: () => {
-                return [
-                    document.getElementById('from-cursor')?.value,
-                    document.getElementById('start-index')?.value,
-                ];
-            },
-            showCancelButton: true,
-            confirmButtonText: 'Start download',
-        });
-        if (config.isDismissed || config.isDenied) return;
+        // download position
+        let downloadPosition: SweetAlertResult | undefined;
+        if (!fromCursor) {
+            downloadPosition = await Swal.fire({
+                icon: 'question',
+                title: t('Download') + '?',
+                text: collectionName,
+                showDenyButton: true,
+                showCancelButton: false,
+                confirmButtonText: t('Download all'),
+                denyButtonText: t('Download from cursor'),
+                reverseButtons: true,
+            });
+            if (downloadPosition.isDismissed) return;
+        }
 
-        fromCursor = config.value[0];
-        startIndex = parseInt(config.value?.[1] || 0);
+        // config
+        if (!downloadPosition || downloadPosition.isDenied) {
+            const config = await Swal.fire({
+                icon: 'info',
+                title: t('Download from cursor'),
+                html: `
+                <label for="from-cursor">
+                    ${t('Last cursor')}: (${t('leave empty to re-download all')})
+                </label><br/>
+                <input
+                    id="from-cursor"
+                    class="swal2-input"
+                    style="margin: 5px"
+                    value="${
+                        fromCursor || localStorage.getItem(collectionName + '_fromCursor') || ''
+                    }">
+                <br/>
+                <label for="start-index">
+                    ${t('Last index')}: (${t('for auto generate file name')})
+                </label><br/>
+                <input
+                    id="start-index"
+                    class="swal2-input"
+                    style="margin: 5px"
+                    value="${
+                        startIndex || localStorage.getItem(collectionName + '_startIndex') || 0
+                    }">
+            `,
+                preConfirm: () => {
+                    return [
+                        document.getElementById('from-cursor')?.value,
+                        document.getElementById('start-index')?.value,
+                    ];
+                },
+                showCancelButton: true,
+                confirmButtonText: t('Start download'),
+            });
+            if (config.isDismissed || config.isDenied) return;
+
+            fromCursor = config.value[0];
+            startIndex = parseInt(config.value?.[1] || 0);
+        }
+
+        // download type
+        const downloadType = await Swal.fire({
+            icon: 'question',
+            title: t('Data type'),
+            text: t('Which data type you want to download?'),
+            showDenyButton: true,
+            showCancelButton: false,
+            confirmButtonText: t('Direct Download'),
+            denyButtonText: t('Only Links'),
+            reverseButtons: true,
+        });
+        if (downloadType.isDismissed) return;
+        let directDownload = downloadType.isConfirmed;
 
         // get download destination folder
         const dirHandler = await window.showDirectoryPicker({ mode: 'readwrite' });
         await dirHandler.requestPermission({ writable: true });
 
+        // create folder with collection name
+        const dir = await dirHandler.getDirectoryHandle(collectionName, {
+            create: true,
+        });
+
         // start fetch and download
         const key = 'downloading_collection_' + collectionName;
-        message.loading({ key, content: 'Downloading...', duration: 0 });
+        message.loading({ key, content: t('Downloading') + '...', duration: 0 });
         const all = fromCursor ? [] : [...data];
         let downloaded = 0,
+            failed = 0,
             index = 0,
             firstFetch = true,
-            stopFetch = false;
+            stopFetch = false,
+            hasMore = true,
+            allLinks: string[] = [];
 
-        while (!stopFetch) {
+        while (!stopFetch && hasMore) {
             const chunk = await fetchNext(all, firstFetch ? fromCursor : undefined);
             if (!chunk?.length && firstFetch && fromCursor) {
                 notification.error({
                     type: 'error',
-                    message: 'No data at from id ' + fromCursor + ' (' + collectionName + ')',
-                    description: 'Will download from start',
+                    message:
+                        t('No data at from your cursor') + fromCursor + ' (' + collectionName + ')',
+                    description: t('Will download from start'),
                     duration: 0,
                 });
             }
             firstFetch = false;
-            if (!chunk?.length) break;
-            all.push(...chunk);
+
+            console.log(chunk);
+            if (chunk?.length) all.push(...chunk);
+            else hasMore = false;
+
+            const arr = all.slice(index);
+            if (!arr.length) break;
 
             const { start, stop: stopQueue } = promiseAllStepN(
                 10,
-                all.slice(index).map((item, i) => async () => {
-                    const { url, name } = await downloadItem(item, downloaded);
-                    const blob = await (await fetch(url)).blob();
-                    const fileNamePrefix = startIndex + index + i + '_';
-                    const fileHandler = await dirHandler.getFileHandle(fileNamePrefix + name, {
-                        create: true,
-                    });
-                    const writable = await fileHandler.createWritable();
-                    await writable.write(blob);
-                    await writable.close();
-                    downloaded++;
-                    message.loading({
-                        key,
-                        content: (
-                            <span>
-                                {`Downloading... ${downloaded}`}
-                                <br />
-                                {collectionName}
-                                <br />
-                                <i>Click to stop</i>
-                            </span>
-                        ),
-                        duration: 0,
-                        onClick: () => {
-                            stopFetch = true;
-                            stopQueue();
-                        },
-                    });
+                arr.map((item, i) => async () => {
+                    try {
+                        const { url, name } = await downloadItem(item, downloaded);
+                        allLinks.push(url);
+
+                        if (directDownload) {
+                            const blob = await (await fetch(url)).blob();
+                            const fileNamePrefix = startIndex + index + i + '_';
+                            const fileHandler = await dir.getFileHandle(fileNamePrefix + name, {
+                                create: true,
+                            });
+                            const writable = await fileHandler.createWritable();
+                            await writable.write(blob);
+                            await writable.close();
+                        }
+                        downloaded++;
+                        message.loading({
+                            key,
+                            content: (
+                                <span>
+                                    {`${t('Downloading')}... ${downloaded}`}
+                                    <br />
+                                    {failed ? `${t('Failed')}: ${failed}` : ''}
+                                    {collectionName}
+                                    <br />
+                                    <i>{t('Click to stop')}</i>
+                                </span>
+                            ),
+                            duration: 0,
+                            onClick: () => {
+                                stopFetch = true;
+                                stopQueue();
+                            },
+                        });
+                    } catch (e) {
+                        failed++;
+                        message.error({
+                            content: t('Download failed') + ': ' + e.message,
+                        });
+                    }
                 })
             );
             const chunk_downloaded = await start();
             index += chunk_downloaded.length;
+        }
+
+        if (!directDownload) {
+            const fileHandler = await dir.getFileHandle('links.txt', { create: true });
+            const writable = await fileHandler.createWritable();
+            await writable.write(allLinks.join('\n'));
+            await writable.close();
         }
 
         // show result
@@ -164,14 +244,20 @@ export default function Collection<T>({
         message.destroy(key);
         notification.success({
             type: 'success',
-            message: 'Download ' + (stopFetch ? 'stopped' : 'finished'),
+            message: t(stopFetch ? 'Download stopped' : 'Download finished'),
             description: (
                 <ul>
-                    <li>Name: {collectionName}</li>
-                    <li>Downloaded: {downloaded}</li>
-                    <li>Last index: {index + startIndex}</li>
                     <li>
-                        Last cursor: <p style={{ wordWrap: 'normal' }}>{cursor}</p>
+                        <b>{t('Folder Name')}:</b> {collectionName}
+                    </li>
+                    <li>
+                        <b>{t('Downloaded')}:</b> {downloaded}
+                    </li>
+                    <li>
+                        <b>{t('Last index')}:</b> {index + startIndex}
+                    </li>
+                    <li>
+                        <b>{t('Last cursor')}:</b> {cursor}
                     </li>
                 </ul>
             ),
@@ -179,39 +265,41 @@ export default function Collection<T>({
             btn: stopFetch ? (
                 <Space direction="horizontal">
                     <Button onClick={() => downloadAll(cursor, index + startIndex)}>
-                        Continue download
+                        {t('Continue download')}
                     </Button>
                 </Space>
             ) : null,
         });
+
+        // save cache
+        localStorage.setItem(collectionName + '_fromCursor', cursor + '');
+        localStorage.setItem(collectionName + '_startIndex', index + startIndex + '');
     };
 
     return (
-        <Image.PreviewGroup>
-            <Space direction="vertical" style={{ width: '100%' }}>
-                {downloadItem && (
-                    <Button.Group style={{ width: '100%', justifyContent: 'center' }}>
-                        <Button type="primary" onClick={() => downloadAll()}>
-                            <i className="fa-solid fa-download fa-lg"></i>
-                            {t('Download')}
-                        </Button>
-                    </Button.Group>
-                )}
-                <List
-                    grid={{ gutter: 10 }}
-                    style={{ width: '100%', justifyContent: 'center' }}
-                    dataSource={data}
-                    renderItem={_renderItem}
-                    rowKey={rowKey}
-                    loadMore={
-                        hasMore ? (
-                            <Space style={{ display: 'flex', justifyContent: 'center' }}>
-                                <i className="fas fa-spinner fa-pulse fa-lg" />
-                            </Space>
-                        ) : null
-                    }
-                />
-            </Space>
-        </Image.PreviewGroup>
+        <Space direction="vertical" style={{ width: '100%' }}>
+            {downloadItem && data.length > 0 && (
+                <Button.Group style={{ width: '100%', justifyContent: 'center' }}>
+                    <Button type="primary" onClick={() => downloadAll()}>
+                        <i className="fa-solid fa-download fa-lg"></i>
+                        {t('Download')}
+                    </Button>
+                </Button.Group>
+            )}
+            <List
+                grid={{ gutter: 10 }}
+                style={{ width: '100%', justifyContent: 'center' }}
+                dataSource={data}
+                renderItem={_renderItem}
+                rowKey={rowKey}
+                loadMore={
+                    hasMore ? (
+                        <Space style={{ display: 'flex', justifyContent: 'center' }}>
+                            <i className="fas fa-spinner fa-pulse fa-lg" />
+                        </Space>
+                    ) : null
+                }
+            />
+        </Space>
     );
 }

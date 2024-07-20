@@ -28,7 +28,7 @@ const CACHED: {
 export async function fetchGraphQl(params: object | string = {}, url: string = ''): Promise<any> {
     let query = '';
     if (typeof params === 'string') query = '&q=' + encodeURIComponent(params);
-    else query = wrapGraphQlParams(params);
+    else query = wrapGraphQlParams({ ...params, __a: 1 });
 
     return fetchExtension(url || 'https://www.facebook.com/api/graphql/', {
         body: query + '&fb_dtsg=' + (await getFbDtsg()),
@@ -173,9 +173,10 @@ export async function getEntityAbout(entityID: string, context = 'DEFAULT'): Pro
         doc_id: '7257793420991802',
     });
     const json = JSON.parse(res);
-    console.log('entity about', json);
     const node = json.data.node;
+    if (!node) throw new Error('Wrong ID / Entity not found');
     const type = node.__typename.toLowerCase();
+    if (!Object.values(TargetType).includes(type)) throw new Error('Not supported type: ' + type);
     const card = node.comet_hovercard_renderer[type];
 
     return {
@@ -221,8 +222,6 @@ export async function getUserInfoFromUid(uid: string): Promise<UserInfoObject> {
         },
     });
     const json = JSON.parse('[' + text.split('\n').join(',') + ']');
-    console.log('user info', json);
-
     return {
         uid: uid,
         gender: lodash_get(json, '0.data.user.gender', ''),
@@ -300,7 +299,6 @@ export async function searchUser(keyword: string, exact_match = true) {
         },
     });
     const json = JSON.parse(res);
-    console.log(json);
     return json;
 }
 
@@ -338,7 +336,6 @@ export async function getUserPhotos({ id, count = 8, cursor = '' }): Promise<ILi
         },
     });
     const json = JSON.parse(res);
-    console.log('user photos', json);
     const { edges = [], page_info } = json?.data?.node?.pageItems || {};
     return {
         photos: edges.map(
@@ -376,16 +373,64 @@ export async function getGroupPhotos({ id, count = 8, cursor = '' }): Promise<IL
         photos: edges.map(
             edge =>
                 ({
+                    id: edge?.node?.id,
                     url: edge?.node?.url,
                     thumbnail: edge?.node?.image?.uri,
-                    image: edge?.node?.node?.viewer_image?.uri,
-                    width: edge?.node?.node?.viewer_image?.width,
-                    height: edge?.node?.node?.viewer_image?.height,
-                    accessibility_caption: edge?.node?.node?.accessibility_caption,
+                    image: edge?.node?.viewer_image?.uri,
+                    width: edge?.node?.viewer_image?.width,
+                    height: edge?.node?.viewer_image?.height,
+                    accessibility_caption: edge?.node?.accessibility_caption,
                     cursor: edge?.cursor,
                 } as IUserPhoto)
         ),
         page_info,
+    };
+}
+
+export async function getLargestPhoto(photoId: string): Promise<IUserPhoto> {
+    const res = await fetchGraphQl({
+        fb_api_req_friendly_name: 'CometPhotoRootContentQuery',
+        variables: {
+            UFI2CommentsProvider_commentsKey: 'CometPhotoRootQuery',
+            feedbackSource: 65,
+            feedLocation: 'COMET_MEDIA_VIEWER',
+            isMediaset: false,
+            // mediasetToken:
+            //     // group = g, user = t, page = pb
+            //     (targetType === 'group' ? 'g' : targetType === 'page' ? 'pb' : 't') +
+            //     '.' +
+            //     targetId,
+            nodeID: photoId,
+            privacySelectorRenderLocation: 'COMET_MEDIA_VIEWER',
+            renderLocation: 'permalink',
+            scale: 2,
+            useDefaultActor: false,
+            useHScroll: false,
+
+            // optional
+            focusCommentID: null,
+            displayCommentsContextEnableComment: null,
+            displayCommentsContextIsAdPreview: null,
+            displayCommentsContextIsAggregatedShare: null,
+            displayCommentsContextIsStorySet: null,
+            displayCommentsFeedbackContext: null,
+            __relay_internal__pv__CometUFIReactionEnableShortNamerelayprovider: true,
+            __relay_internal__pv__CometUFIShareActionMigrationrelayprovider: false,
+            __relay_internal__pv__CometUFIReactionsEnableShortNamerelayprovider: false,
+            __relay_internal__pv__CometImmersivePhotoCanUserDisable3DMotionrelayprovider: false,
+        },
+        doc_id: '7830475950340566',
+    });
+    const json = JSON.parse(res?.split('\n')?.[0] || '{}');
+    const media = json?.data?.currMedia || {};
+    return {
+        id: photoId,
+        url: media.creation_story?.url,
+        accessibility_caption: media.accessibility_caption,
+        image: media.image.uri,
+        width: media.image.width,
+        height: media.image.height,
+        thumbnail: media.image.uri,
     };
 }
 
@@ -417,7 +462,6 @@ export async function getUserAlbum({ uid = '', cursor = '' }) {
         doc_id: '8672545689426653',
     });
     const json = JSON.parse(res);
-    console.log('user album', json);
     const { edges = [], page_info = {} } = json?.data?.node?.pageItems || {};
     for (const edge of edges) {
         const id = atob(edge?.node?.id).split(':').pop() || '';
@@ -448,7 +492,6 @@ export async function getGroupAlbum({ groupId = '', cursor = '' }) {
         doc_id: '6894403247286675',
     });
     const json = JSON.parse(res);
-    console.log('group album', json);
     const { edges = [], page_info = {} } = json?.data?.node?.group_albums || {};
     for (const edge of edges) {
         const id = edge?.node?.id;
@@ -474,7 +517,6 @@ export async function getEntityAlbum({ id = '', fromId = '', accessToken = '' })
         }{type,name,count,link,picture{url}}&access_token=${accessToken}`
     );
     const json = JSON.parse(res);
-    console.log('entity albums', json);
     if (json.albums?.data?.length) {
         for (const album of json.albums.data) {
             albums.push({
@@ -491,9 +533,14 @@ export async function getEntityAlbum({ id = '', fromId = '', accessToken = '' })
     return { albums, nextCursor: json.albums?.paging?.cursors?.after };
 }
 
+export enum MediaType {
+    IMAGE = 'image',
+    VIDEO = 'video',
+}
 export type IAlbumPhoto = {
     id: string;
-    image: string;
+    uri: string;
+    type: MediaType;
 };
 export async function getAlbumPhoto({
     albumId,
@@ -507,7 +554,13 @@ export async function getAlbumPhoto({
     let res = await fetchExtension(url);
     let json = JSON.parse(res);
     if (json?.data?.length) {
-        return json?.data?.map(_ => ({ id: _.id, image: _.largest_image.source })) || [];
+        return (
+            json?.data?.map(_ => ({
+                id: _.id,
+                uri: _.largest_image.source,
+                type: MediaType.IMAGE,
+            })) || []
+        );
     }
 
     // backup plan: use graphql (14 photos/request)
@@ -526,7 +579,8 @@ export async function getAlbumPhoto({
         let medias = json.data.node.media.edges.map(edge => {
             return {
                 id: edge.node.id,
-                image: edge.node.image.uri,
+                uri: edge.node.image.uri,
+                type: edge.node.__typename === 'Video' ? MediaType.VIDEO : MediaType.IMAGE,
             };
         });
         return medias;
@@ -535,41 +589,6 @@ export async function getAlbumPhoto({
         return [];
     }
 }
-
-// album photos
-// fb_api_req_friendly_name: CometAlbumPhotoCollagePaginationQuery
-// variables: {"count":14,"cursor":"ZmJpZDo1MjU3MDAyMDQxNTcxNDc=","renderLocation":"permalink","scale":2,"id":"489823451078156"}
-// server_timestamps: true
-// doc_id: 8142948395762884
-
-// largest photo
-const a = {
-    fb_api_req_friendly_name: 'CometPhotoRootContentQuery',
-    variables: {
-        UFI2CommentsProvider_commentsKey: 'CometPhotoRootQuery',
-        displayCommentsContextEnableComment: null,
-        displayCommentsContextIsAdPreview: null,
-        displayCommentsContextIsAggregatedShare: null,
-        displayCommentsContextIsStorySet: null,
-        displayCommentsFeedbackContext: null,
-        feedbackSource: 65,
-        feedLocation: 'COMET_MEDIA_VIEWER',
-        focusCommentID: null,
-        isMediaset: true,
-        mediasetToken: 'g.1154059318582088',
-        nodeID: '2550177295153855',
-        privacySelectorRenderLocation: 'COMET_MEDIA_VIEWER',
-        renderLocation: 'permalink',
-        scale: 2,
-        useDefaultActor: false,
-        useHScroll: false,
-        __relay_internal__pv__CometUFIReactionEnableShortNamerelayprovider: true,
-        __relay_internal__pv__CometUFIShareActionMigrationrelayprovider: false,
-        __relay_internal__pv__CometUFIReactionsEnableShortNamerelayprovider: false,
-        __relay_internal__pv__CometImmersivePhotoCanUserDisable3DMotionrelayprovider: false,
-    },
-    doc_id: '7830475950340566',
-};
 
 // #endregion
 
@@ -586,7 +605,7 @@ export type IVideo = {
     picture: string;
     cursor: string;
 };
-export async function getVideo({ id = '', cursor = '' }) {
+export async function getUserVideo({ id = '', cursor = '' }) {
     const videos: IVideo[] = [];
     const res = await fetchGraphQl({
         variables: {
@@ -598,10 +617,42 @@ export async function getVideo({ id = '', cursor = '' }) {
         doc_id: '3975496529227403',
     });
     const json = JSON.parse(res);
-    console.log('video', json);
     const { edges = [], page_info = {} } = json?.data?.node?.pageItems || {};
     for (const edge of edges) {
         const id = edge?.node?.node?.id || '';
+        // const videoInfo = await getVideoInfo(id);
+        videos.push({
+            id,
+            recent: videos.length,
+            created_time: '', // videoInfo.created_time,
+            description: edge?.node?.title?.text,
+            length: edge?.node?.node?.playable_duration,
+            url: edge?.node?.url,
+            source: '', // videoInfo.source,
+            picture: edge?.node?.image?.uri, //videoInfo.thumbnail
+            cursor: edge?.cursor || '',
+        });
+    }
+
+    return { videos, nextCursor: page_info?.end_cursor };
+}
+
+export async function getGroupVideo({ id = '', cursor = '' }) {
+    const videos: IVideo[] = [];
+    const res = await fetchGraphQl({
+        fb_api_req_friendly_name: 'GroupsCometVideosRootQueryContainerQuery',
+        variables: {
+            cursor,
+            count: 8,
+            scale: 2,
+            groupID: id,
+        },
+        doc_id: '6553573504724585',
+    });
+    const json = JSON.parse(res);
+    const { edges = [], page_info = {} } = json?.data?.group?.group_mediaset?.media || {};
+    for (const edge of edges) {
+        const id = edge?.node?.id || '';
         // const videoInfo = await getVideoInfo(id);
         videos.push({
             id,
@@ -674,7 +725,7 @@ export async function getAllVideos({
     let cursor = '';
     while (true) {
         try {
-            const { videos, nextCursor } = await getVideo({ id, cursor });
+            const { videos, nextCursor } = await getUserVideo({ id, cursor });
 
             allVideos.push(...videos);
             // TODO move inside for loop if enable getVideoInfo
@@ -694,36 +745,44 @@ export async function getAllVideos({
 
 export async function getVideoInfo(videoId: string) {
     const res = await fetchGraphQl({
+        fb_api_req_friendly_name: 'CometTahoeRootQuery',
         variables: {
-            UFI2CommentsProvider_commentsKey: 'CometTahoeSidePaneQuery',
-            caller: 'CHANNEL_VIEW_FROM_PAGE_TIMELINE',
-            displayCommentsContextEnableComment: null,
-            displayCommentsContextIsAdPreview: null,
-            displayCommentsContextIsAggregatedShare: null,
-            displayCommentsContextIsStorySet: null,
-            displayCommentsFeedbackContext: null,
+            caller: 'TAHOE',
+            chainingCursor: null,
+            chainingSeedVideoId: null,
+            channelEntryPoint: 'TAHOE',
+            channelID: '',
             feedbackSource: 41,
             feedLocation: 'TAHOE',
             focusCommentID: null,
+            isCrawler: false,
             privacySelectorRenderLocation: 'COMET_STREAM',
             renderLocation: 'video_channel',
             scale: 1,
-            streamChainingSection: !1,
-            useDefaultActor: !1,
+            streamChainingSection: false,
+            useDefaultActor: false,
             videoChainingContext: null,
             videoID: videoId,
+            __relay_internal__pv__CometUFIShareActionMigrationrelayprovider: true,
+            __relay_internal__pv__CometUFIReactionsEnableShortNamerelayprovider: false,
+            __relay_internal__pv__StoriesLWRVariantrelayprovider: 'www_new_reactions',
         },
-        doc_id: '5279476072161634',
+        doc_id: '26374037368876407',
     });
-    const videoInfo = JSON.parse(res.split('\n')[0]).data.video;
+    const json = JSON.parse(res.split('\n')[0]);
+    const videoInfo = json?.data?.video || {};
     return {
         id: videoInfo.videoId || videoInfo.id,
         owner: videoInfo.owner.id,
         length: videoInfo.playable_duration_in_ms / 1000,
-        url: videoInfo.url,
-        width: videoInfo.original_width,
-        height: videoInfo.original_height,
-        source: videoInfo.playable_url_quality_hd || videoInfo.playable_url,
+        url: videoInfo.url || videoInfo.permalink_url,
+        width: videoInfo.original_width || videoInfo.width,
+        height: videoInfo.original_height || videoInfo.height,
+        source:
+            videoInfo.browser_native_hd_url ||
+            videoInfo.playable_url_quality_hd ||
+            videoInfo.browser_native_sd_url ||
+            videoInfo.playable_url,
         created_time: (videoInfo.publish_time * 1000).toString(),
         thumbnail: videoInfo.preferred_thumbnail?.image?.uri,
     };

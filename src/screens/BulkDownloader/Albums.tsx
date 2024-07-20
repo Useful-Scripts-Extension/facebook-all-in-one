@@ -4,32 +4,49 @@ import {
     ACCESS_TOKEN_TYPE,
     getAccessToken,
     getEntityAlbum,
+    getGroupAlbum,
+    getUserAlbum,
     IAlbum,
+    IEntityAbout,
     TargetType,
 } from '../../utils/facebook';
 import { formatNumberWithCommas } from '../../utils/helper';
 import Collection from '../../components/Collection';
 
 export default function Albums({
-    targetId,
-    targetType,
+    target,
     onOpenAlbum,
 }: {
-    readonly targetId?: string;
-    readonly targetType?: TargetType;
+    readonly target: IEntityAbout | null;
     readonly onOpenAlbum?: (album: IAlbum) => void;
 }) {
     const fetchNext = useCallback(
         async (currentData: IAlbum[] = []) => {
-            if (!targetId || !targetType) return;
-            const res = await getEntityAlbum({
-                id: targetId,
-                accessToken: await getAccessToken(ACCESS_TOKEN_TYPE.EAAB),
-                fromId: currentData?.[currentData?.length - 1]?.id || '',
-            });
-            return res.albums;
+            if (!target?.id || !target?.type) return;
+            const lastItem = currentData?.[currentData?.length - 1];
+
+            // accessToken way
+            if (target.type !== TargetType.Group) {
+                const res = await getEntityAlbum({
+                    id: target?.id,
+                    accessToken: await getAccessToken(ACCESS_TOKEN_TYPE.EAAB),
+                    fromId: lastItem?.id || '',
+                });
+                return res.albums;
+            }
+
+            // graphql way
+            const res2 =
+                target.type === TargetType.Group
+                    ? await getGroupAlbum({ groupId: target.id, cursor: lastItem?.cursor })
+                    : await getUserAlbum({ uid: target.id, cursor: lastItem?.cursor });
+            if (res2.albums?.length) {
+                let existId = new Set(currentData.map(item => item.id));
+                return res2.albums.filter(item => !existId.has(item.id));
+            }
+            return [];
         },
-        [targetId, targetType]
+        [target]
     );
 
     const renderItem = useCallback((item: IAlbum) => {
@@ -61,11 +78,13 @@ export default function Albums({
     }, []);
 
     return (
-        <Collection
-            collectionName="Albums"
-            fetchNext={fetchNext}
-            renderItem={renderItem}
-            rowKey={item => item.id}
-        />
+        <Image.PreviewGroup>
+            <Collection
+                collectionName={target?.name + ' - Albums'}
+                fetchNext={fetchNext}
+                renderItem={renderItem}
+                rowKey={item => item.id}
+            />
+        </Image.PreviewGroup>
     );
 }

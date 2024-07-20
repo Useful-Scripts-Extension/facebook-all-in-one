@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Space, Tabs, TabsProps, Input, Card, Avatar, FloatButton } from 'antd';
+import React, { useMemo, useState } from 'react';
+import { Space, Tabs, TabsProps, Input, Card, Avatar, FloatButton, message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { getEntityAbout, IAlbum, IEntityAbout, TargetType, trackEvent } from '../../utils/facebook';
 
@@ -37,9 +37,34 @@ export default function BulkDownloader() {
     const [tabs, setTabs] = useState(DefaultTabs);
     const [loading, setLoading] = useState(false);
     const [about, setAbout] = useState(null as IEntityAbout | null);
-    const [targetId, setTargetId] = useState('100050164073708');
+    const [targetId, setTargetId] = useState(''); //100050164073708
 
     const targetType = about?.type || TargetType.User;
+
+    const desc = useMemo(() => {
+        switch (targetType) {
+            case TargetType.User:
+                return (
+                    <Space>
+                        <i className="fa-solid fa-user"></i> User
+                    </Space>
+                );
+            case TargetType.Group:
+                return (
+                    <Space>
+                        <i className="fa-solid fa-people-group"></i> Group
+                    </Space>
+                );
+            case TargetType.Page:
+                return (
+                    <Space>
+                        <i className="fa-solid fa-pager"></i> Page
+                    </Space>
+                );
+            default:
+                return 'Unknow';
+        }
+    }, [targetType]);
 
     // useEffect(() => {
     //     const timeout = setTimeout(onSearch, 500);
@@ -51,11 +76,13 @@ export default function BulkDownloader() {
         setLoading(true);
         getEntityAbout(targetId)
             .then(data => {
+                console.log(data);
                 setAbout(data);
                 setTabs(DefaultTabs);
-                // setActiveKey(DefaultTabs[0].key);
             })
-            .catch(e => console.log(e))
+            .catch(e => {
+                message.error(e.message);
+            })
             .finally(() => setLoading(false));
     };
 
@@ -106,23 +133,25 @@ export default function BulkDownloader() {
         setActiveKey(tabKey);
     };
 
+    const getComp = (tab: Tab) => {
+        switch (tab.key) {
+            case TabKey.Photos:
+                return <Photos target={about} />;
+            case TabKey.Videos:
+                return <Videos target={about} />;
+            case TabKey.Albums:
+                return <Albums target={about} onOpenAlbum={onOpenAlbum} />;
+            default:
+                if (tab.key.startsWith(TabKey.Album)) {
+                    return <Album target={about} album={tab.props?.album} />;
+                }
+                return null;
+        }
+    };
+
     const tabItems: TabsProps['items'] = about
         ? tabs.map(tab => {
-              const comp =
-                  tab.key === TabKey.Photos ? (
-                      <Photos targetId={about?.id} targetType={about?.type} />
-                  ) : tab.key === TabKey.Videos ? (
-                      <Videos targetId={about?.id} />
-                  ) : tab.key === TabKey.Albums ? (
-                      <Albums
-                          targetId={about?.id}
-                          targetType={about?.type}
-                          onOpenAlbum={onOpenAlbum}
-                      />
-                  ) : tab.key.startsWith(TabKey.Album) ? (
-                      <Album album={tab.props?.album} />
-                  ) : null;
-
+              const comp = getComp(tab);
               return {
                   key: tab.key,
                   label: tab.label,
@@ -144,7 +173,7 @@ export default function BulkDownloader() {
                     alignItems: 'center',
                 }}
             >
-                <h2>{t('Bulk downloader')}</h2>
+                <h2>{t('Bulk Downloader')}</h2>
 
                 <Search
                     value={targetId}
@@ -153,9 +182,7 @@ export default function BulkDownloader() {
                     style={{ width: 350 }}
                     onChange={e => setTargetId(e.target.value)}
                     onSearch={onSearch}
-                    enterButton={
-                        loading ? null : <i className="fa-solid fa-wand-magic-sparkles"></i>
-                    }
+                    enterButton={loading ? null : <i className="fa-solid fa-magnifying-glass"></i>}
                     loading={loading}
                 />
 
@@ -170,37 +197,25 @@ export default function BulkDownloader() {
                                         {about.name}
                                     </a>
                                 }
-                                description={
-                                    targetType === TargetType.User ? (
-                                        <Space>
-                                            <i className="fa-solid fa-user"></i> User
-                                        </Space>
-                                    ) : targetType === TargetType.Page ? (
-                                        <Space>
-                                            <i className="fa-solid fa-pager"></i> Page
-                                        </Space>
-                                    ) : (
-                                        <Space>
-                                            <i className="fa-solid fa-people-group"></i> Group
-                                        </Space>
-                                    )
-                                }
+                                description={desc}
                             />
                         </Card>
                     </Space>
                 ) : null}
             </Space>
 
-            <Tabs
-                defaultActiveKey={activeKey}
-                activeKey={activeKey}
-                type="editable-card"
-                centered
-                hideAdd
-                items={tabItems}
-                onChange={onChangeTab}
-                onEdit={onEdit}
-            />
+            {tabItems.length ? (
+                <Tabs
+                    defaultActiveKey={activeKey}
+                    activeKey={activeKey}
+                    type="editable-card"
+                    centered
+                    hideAdd
+                    items={tabItems}
+                    onChange={onChangeTab}
+                    onEdit={onEdit}
+                />
+            ) : null}
 
             <FloatButton.BackTop />
         </Space>
