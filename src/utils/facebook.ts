@@ -389,29 +389,6 @@ export async function getGroupPhotos({ id, count = 8, cursor = '' }): Promise<IL
     };
 }
 
-export async function getAllPhotos({ id, onProgress, targetType = TargetType.User, cursor = '' }) {
-    const photos: IUserPhoto[] = [];
-    while (true) {
-        try {
-            const res =
-                targetType === TargetType.Group
-                    ? await getGroupPhotos({ id, cursor })
-                    : await getUserPhotos({ id, cursor });
-            if (res?.photos?.length) {
-                photos.push(...res.photos);
-                let stop = onProgress?.(photos);
-                if (stop) return photos;
-            }
-            if (!res?.page_info?.has_next_page) break;
-            cursor = res.page_info.end_cursor;
-        } catch (e) {
-            console.log(e);
-            break;
-        }
-    }
-    return photos;
-}
-
 // #endregion
 
 // #region albums
@@ -458,34 +435,6 @@ export async function getUserAlbum({ uid = '', cursor = '' }) {
     return { albums, nextCursor: page_info?.end_cursor };
 }
 
-export async function getAllUserAlbums({
-    uid,
-    onProgress,
-    cursor = '',
-}: {
-    uid: string;
-    onProgress?: (albums: IAlbum[]) => void;
-    cursor?: string;
-}) {
-    const allAlbums: IAlbum[] = [];
-    while (true) {
-        try {
-            const { albums, nextCursor } = await getUserAlbum({ uid, cursor });
-
-            allAlbums.push(...albums);
-            let stop = onProgress?.(allAlbums);
-            if (stop) return allAlbums;
-
-            if (!nextCursor) break;
-            cursor = nextCursor;
-        } catch (e) {
-            console.error(e);
-            break;
-        }
-    }
-    return allAlbums;
-}
-
 export async function getGroupAlbum({ groupId = '', cursor = '' }) {
     const albums: IAlbum[] = [];
     const res = await fetchGraphQl({
@@ -517,40 +466,11 @@ export async function getGroupAlbum({ groupId = '', cursor = '' }) {
     return { albums, nextCursor: page_info?.end_cursor };
 }
 
-export async function getAllGroupAlbums({
-    groupId,
-    onProgress,
-    cursor = '',
-}: {
-    groupId: string;
-    onProgress?: (albums: IAlbum[]) => boolean | void;
-    cursor?: string;
-}) {
-    const allAlbums: IAlbum[] = [];
-    while (true) {
-        try {
-            const { albums, nextCursor } = await getGroupAlbum({ groupId, cursor });
-
-            allAlbums.push(...albums);
-            let stop = onProgress?.(allAlbums);
-            if (stop) return allAlbums;
-
-            if (!nextCursor) break;
-            cursor = nextCursor;
-        } catch (e) {
-            console.error(e);
-            break;
-        }
-    }
-    return allAlbums;
-}
-
-export async function getEntityAlbum({ id = '', cursor = '', accessToken = '' }) {
-    // cursor = btoa(albumId)
+export async function getEntityAlbum({ id = '', fromId = '', accessToken = '' }) {
     const albums: IAlbum[] = [];
     const res = await fetchExtension(
         `https://graph.facebook.com/v14.0/${id}?fields=albums.limit(100)${
-            cursor ? `.after(${cursor})` : ''
+            fromId ? `.after(${btoa(fromId)})` : ''
         }{type,name,count,link,picture{url}}&access_token=${accessToken}`
     );
     const json = JSON.parse(res);
@@ -569,76 +489,6 @@ export async function getEntityAlbum({ id = '', cursor = '', accessToken = '' })
         }
     }
     return { albums, nextCursor: json.albums?.paging?.cursors?.after };
-}
-
-export async function getAllEntityAlbums({ id, accessToken, onProgress, fromAlbumId }) {
-    const allAlbums: IAlbum[] = [];
-    let after = fromAlbumId ? btoa(fromAlbumId) : '';
-    while (true) {
-        try {
-            const { albums, nextCursor } = await getEntityAlbum({ id, cursor: after, accessToken });
-
-            allAlbums.push(...albums);
-            let stop = onProgress?.(allAlbums);
-            if (stop) return allAlbums;
-
-            if (!nextCursor || after === nextCursor) break;
-            after = nextCursor;
-        } catch (e) {
-            console.error(e);
-            break;
-        }
-    }
-    return allAlbums;
-}
-
-export async function getAllAlbums({
-    id,
-    accessToken,
-    targetType = TargetType.User,
-    onProgress,
-    fromAlbumId = '',
-}: {
-    id: string;
-    accessToken: string;
-    targetType?: TargetType;
-    onProgress?: (albums: IAlbum[]) => boolean | void;
-    fromAlbumId?: string;
-}) {
-    const albums: IAlbum[] = [];
-    const albumIds = new Set();
-
-    const subOnProgress = _albums => {
-        for (let album of _albums) {
-            if (!albumIds.has(album?.id)) {
-                albums.push(album);
-                albumIds.add(album?.id);
-            }
-        }
-        return onProgress?.(albums);
-    };
-
-    // access_token way => can get timeline album
-    await getAllEntityAlbums({
-        id,
-        accessToken,
-        onProgress: subOnProgress,
-        fromAlbumId,
-    });
-
-    // graphql way
-    // TODO from cursor
-    targetType === TargetType.Group
-        ? await getAllGroupAlbums({
-              groupId: id,
-              onProgress: subOnProgress,
-          })
-        : await getAllUserAlbums({
-              uid: id,
-              onProgress: subOnProgress,
-          });
-
-    return albums;
 }
 
 export type IAlbumPhoto = {

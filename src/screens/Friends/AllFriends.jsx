@@ -20,7 +20,6 @@ import {
     checkCanMessage,
     getAllFriends,
     getAllLockedFriends,
-    getAllPhotos,
     getFbUrlFromId,
     pokeFriend,
     trackEvent,

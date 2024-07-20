@@ -106,25 +106,31 @@ export default function BulkDownloader() {
         setActiveKey(tabKey);
     };
 
-    const tabItems: TabsProps['items'] = tabs.map(tab => {
-        const comp =
-            tab.key === TabKey.Photos ? (
-                <Photos targetId={about?.id} targetType={about?.type} />
-            ) : tab.key === TabKey.Videos ? (
-                <Videos targetId={about?.id} />
-            ) : tab.key === TabKey.Albums ? (
-                <Albums targetId={about?.id} targetType={about?.type} onOpenAlbum={onOpenAlbum} />
-            ) : tab.key.startsWith(TabKey.Album) ? (
-                <Album album={tab.props?.album} />
-            ) : null;
+    const tabItems: TabsProps['items'] = about
+        ? tabs.map(tab => {
+              const comp =
+                  tab.key === TabKey.Photos ? (
+                      <Photos targetId={about?.id} targetType={about?.type} />
+                  ) : tab.key === TabKey.Videos ? (
+                      <Videos targetId={about?.id} />
+                  ) : tab.key === TabKey.Albums ? (
+                      <Albums
+                          targetId={about?.id}
+                          targetType={about?.type}
+                          onOpenAlbum={onOpenAlbum}
+                      />
+                  ) : tab.key.startsWith(TabKey.Album) ? (
+                      <Album album={tab.props?.album} />
+                  ) : null;
 
-        return {
-            key: tab.key,
-            label: tab.label,
-            closable: tab.closable,
-            children: comp,
-        };
-    });
+              return {
+                  key: tab.key,
+                  label: tab.label,
+                  closable: tab.closable,
+                  children: comp,
+              };
+          })
+        : [];
 
     return (
         <Space style={{ width: '100%', height: '100%' }} direction="vertical">

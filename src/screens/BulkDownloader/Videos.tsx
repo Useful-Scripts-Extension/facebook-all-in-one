@@ -57,6 +57,7 @@ export default function Videos({ targetId }: { readonly targetId: string | undef
             fetchNext={fetchNext}
             renderItem={renderItem}
             downloadItem={downloadItem}
+            getItemCursor={item => item.cursor}
             rowKey={item => item.id}
         />
     );

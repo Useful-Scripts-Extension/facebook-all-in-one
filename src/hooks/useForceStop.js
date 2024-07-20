@@ -15,7 +15,7 @@ export default function useForceStop() {
             stopPrevRef.current();
 
             // start new instant
-            let forceStop = true; // TODO turn this to false
+            let forceStop = false;
             stopPrevRef.current = () => {
                 forceStop = true;
             };

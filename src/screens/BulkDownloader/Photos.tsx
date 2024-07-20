@@ -11,11 +11,11 @@ export default function Photos({
     readonly targetType?: TargetType;
 }) {
     const fetchNext = useCallback(
-        async (currentData: IUserPhoto[] = []) => {
+        async (currentData: IUserPhoto[] = [], fromCursor?: string) => {
             if (!targetId || !targetType) return;
             const res = await getUserPhotos({
                 id: targetId,
-                cursor: currentData?.[currentData?.length - 1]?.cursor || '',
+                cursor: fromCursor || currentData?.[currentData?.length - 1]?.cursor || '',
             });
             return res.photos;
         },
@@ -50,6 +50,7 @@ export default function Photos({
             fetchNext={fetchNext}
             renderItem={renderItem}
             downloadItem={downloadItem}
+            getItemCursor={item => item.cursor || ''}
             rowKey={item => item.id}
         />
     );

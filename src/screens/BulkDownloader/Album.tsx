@@ -19,12 +19,12 @@ export default function Album({
     const _albumId = albumId || album.id;
 
     const fetchNext = useCallback(
-        async (currentData: IAlbumPhoto[] = []) => {
+        async (currentData: IAlbumPhoto[] = [], cursor?: string) => {
             if (!_albumId) return;
             const res = await getAlbumPhoto({
                 albumId: _albumId,
                 accessToken: await getAccessToken(ACCESS_TOKEN_TYPE.EAAB),
-                fromId: currentData[currentData.length - 1]?.id || '',
+                fromId: cursor || currentData[currentData.length - 1]?.id || '',
             });
             return res;
         },
@@ -57,6 +57,7 @@ export default function Album({
             fetchNext={fetchNext}
             renderItem={renderItem}
             downloadItem={downloadItem}
+            getItemCursor={item => item.id}
             rowKey={item => item.id}
         />
     );

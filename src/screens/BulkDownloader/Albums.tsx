@@ -25,7 +25,7 @@ export default function Albums({
             const res = await getEntityAlbum({
                 id: targetId,
                 accessToken: await getAccessToken(ACCESS_TOKEN_TYPE.EAAB),
-                cursor: btoa(currentData?.[currentData?.length - 1]?.id || ''),
+                fromId: currentData?.[currentData?.length - 1]?.id || '',
             });
             return res.albums;
         },

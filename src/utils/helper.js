@@ -70,3 +70,44 @@ export function formatSeconds(seconds) {
     else str += `${ss}`;
     return str;
 }
+
+// modified based on: https://gist.github.com/jcouyang/632709f30e12a7879a73e9e132c0d56b
+export function promiseAllStepN(n, list) {
+    const head = list.slice(0, n);
+    const tail = list.slice(n);
+    const resolved = [];
+    let stop = false;
+
+    return {
+        start: () =>
+            new Promise(resolve => {
+                let processed = 0;
+                function runNext() {
+                    if (processed === tail.length || stop) {
+                        resolve(Promise.all(resolved));
+                        return;
+                    }
+                    const promise = tail[processed](processed);
+                    resolved.push(
+                        promise.then(result => {
+                            runNext();
+                            return result;
+                        })
+                    );
+                    processed++;
+                }
+                head.forEach(func => {
+                    const promise = func(processed);
+                    resolved.push(
+                        promise.then(result => {
+                            runNext();
+                            return result;
+                        })
+                    );
+                });
+            }),
+        stop: () => {
+            stop = true;
+        },
+    };
+}
