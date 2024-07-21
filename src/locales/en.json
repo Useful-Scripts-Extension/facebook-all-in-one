@@ -107,6 +107,34 @@
         "Found {{count}} unfriended": "Found {{count}} unfriended",
         "File empty": "File emptyu",
 
-        "Coming Soon": "Coming Soon"
+        "Coming Soon": "Coming Soon",
+
+        "Find friends": "Find friends",
+        "Enter email or phone number": "Enter email or phone number",
+
+        "Bulk Downloader": "Bulk Downloader",
+        "Enter id of user/page/group": "Enter id of user/page/group",
+        "Download all": "Download all",
+        "Download from cursor": "Download from cursor",
+        "Last cursor": "Last cursor",
+        "leave empty to re-download all": "leave empty to re-download all",
+        "Last index": "Last index",
+        "for auto generate file name": "for auto generate file name",
+        "Start download": "Start download",
+        "Downloading": "Downloading",
+        "No data at from your cursor": "No data at from your cursor",
+        "Will download from start": "Will download from start",
+        "Download stopped": "Download stopped",
+        "Download finished": "Download finished",
+        "Click to stop": "Click to stop",
+        "Folder Name": "Folder Name",
+        "Downloaded": "Downloaded",
+        "Continue download": "Continue download",
+        "Data type": "Data type",
+        "Which data type you want to download?": "Which data type you want to download?",
+        "Direct Download": "Direct Download",
+        "Only Links": "Only Links",
+        "Download failed": "Download failed",
+        "Failed": "Failedi"
     }
 }
