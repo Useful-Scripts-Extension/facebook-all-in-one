@@ -28,7 +28,15 @@ const CACHED: {
 export async function fetchGraphQl(params: object | string = {}, url: string = ''): Promise<any> {
     let query = '';
     if (typeof params === 'string') query = '&q=' + encodeURIComponent(params);
-    else query = wrapGraphQlParams({ ...params, __a: 1 });
+    else
+        query = wrapGraphQlParams({
+            dpr: 1,
+            __a: 1,
+            __aaid: 0,
+            __ccg: 'GOOD',
+            server_timestamps: true,
+            ...params,
+        });
 
     return fetchExtension(url || 'https://www.facebook.com/api/graphql/', {
         body: query + '&fb_dtsg=' + (await getFbDtsg()),
@@ -768,6 +776,68 @@ export async function getGroupFiles({ groupId = '', cursor = '' }): Promise<IGro
                 cursor: page_info?.end_cursor,
             } as IGroupFile)
     );
+}
+
+// #endregion
+
+// #region reels
+
+export type IReel = {
+    id: string;
+    created_time: number;
+    description: string;
+    viewCount: number | string;
+    url: string;
+    source: string;
+    thumbnail: string;
+    width: number;
+    height: number;
+    length: number;
+    cursor: string;
+};
+
+export async function getUserReels({ id = '', cursor = '' }): Promise<IReel[]> {
+    const res = await fetchGraphQl({
+        fb_api_req_friendly_name: 'ProfileCometAppCollectionReelsRendererPaginationQuery',
+        variables: {
+            count: 10,
+            cursor: cursor,
+            feedLocation: 'COMET_MEDIA_VIEWER',
+            feedbackSource: 65,
+            focusCommentID: null,
+            renderLocation: null,
+            scale: 1,
+            useDefaultActor: true,
+            id: btoa('app_collection:' + id + ':168684841768375:260'),
+        },
+        doc_id: '7821270511254925',
+    });
+
+    const json = JSON.parse(res?.split('\n')?.[0] || '{}');
+    const { edges = [], page_info = {} } = json?.data?.node?.aggregated_fb_shorts || {};
+
+    return edges.map(edge => {
+        const short_form_video_context =
+            edge?.profile_reel_node?.node?.short_form_video_context || {};
+
+        return {
+            id:
+                edge?.profile_reel_node?.node?.video?.id ||
+                atob(edge?.profile_reel_node?.id).split(':').pop(),
+            created_time: edge?.profile_reel_node?.node?.creation_time,
+            description: edge?.profile_reel_node?.node?.message?.text,
+            viewCount: short_form_video_context?.play_count_reduced,
+            source:
+                short_form_video_context?.playback_video?.browser_native_hd_url ||
+                short_form_video_context?.playback_video?.browser_native_sd_url,
+            height: short_form_video_context?.playback_video?.height,
+            width: short_form_video_context?.playback_video?.width,
+            thumbnail: short_form_video_context?.playback_video?.image?.uri,
+            url: short_form_video_context?.shareable_url,
+            length: short_form_video_context?.playback_video?.length_in_second,
+            cursor: edge?.cursor || page_info.end_cursor,
+        } as IReel;
+    });
 }
 
 // #endregion

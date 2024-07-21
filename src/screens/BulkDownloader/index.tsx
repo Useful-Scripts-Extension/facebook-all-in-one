@@ -1,13 +1,21 @@
 import React, { useMemo, useState } from 'react';
 import { Space, Tabs, TabsProps, Input, Card, Avatar, FloatButton, message } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { getEntityAbout, IAlbum, IEntityAbout, TargetType, trackEvent } from '../../utils/facebook';
+import {
+    getEntityAbout,
+    getUserReels,
+    IAlbum,
+    IEntityAbout,
+    TargetType,
+    trackEvent,
+} from '../../utils/facebook';
 
 const Albums = React.lazy(() => import('./Albums'));
 const Videos = React.lazy(() => import('./Videos'));
 const Photos = React.lazy(() => import('./Photos'));
 const Album = React.lazy(() => import('./Album'));
 const GroupFiles = React.lazy(() => import('./GroupFiles'));
+const Reels = React.lazy(() => import('./Reels'));
 
 const { Search } = Input;
 
@@ -17,6 +25,7 @@ const enum TabKey {
     Photos = 'Photos',
     Album = 'Album-',
     Files = 'Files',
+    Reels = 'Reels',
 }
 
 type Tab = {
@@ -31,6 +40,7 @@ const DefaultTabs: Tab[] = [
     { key: TabKey.Videos, label: TabKey.Videos, closable: false },
     { key: TabKey.Albums, label: TabKey.Albums, closable: false },
     { key: TabKey.Files, label: TabKey.Files, closable: false },
+    { key: TabKey.Reels, label: TabKey.Reels, closable: false },
 ];
 
 export default function BulkDownloader() {
@@ -77,6 +87,8 @@ export default function BulkDownloader() {
     const onSearch = () => {
         trackEvent('BulkDownloader:onSearch');
         setLoading(true);
+
+        getUserReels({ id: targetId });
         getEntityAbout(targetId)
             .then(data => {
                 console.log(data);
@@ -147,6 +159,8 @@ export default function BulkDownloader() {
             case TabKey.Files:
                 if (targetType === TargetType.Group) return <GroupFiles target={about} />;
                 return null;
+            case TabKey.Reels:
+                return <Reels target={about} />;
             default:
                 if (tab.key.startsWith(TabKey.Album)) {
                     return <Album target={about} album={tab.props?.album} />;
