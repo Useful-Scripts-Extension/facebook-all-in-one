@@ -637,6 +637,7 @@ export async function getUserVideo({ id = '', cursor = '' }) {
     return { videos, nextCursor: page_info?.end_cursor };
 }
 
+// `https://graph.facebook.com/v14.0/${id}?fields=videos.limit(100)${after ? `.after(${after})` : ''}{created_time,description,id,length,post_id,source,picture}&access_token=${accessToken}`
 export async function getGroupVideo({ id = '', cursor = '' }) {
     const videos: IVideo[] = [];
     const res = await fetchGraphQl({
@@ -668,79 +669,6 @@ export async function getGroupVideo({ id = '', cursor = '' }) {
     }
 
     return { videos, nextCursor: page_info?.end_cursor };
-}
-
-export async function getAllVideos({
-    id,
-    onProgress,
-}: {
-    id: string;
-    onProgress?: (videos: IVideo[]) => boolean | void;
-}) {
-    const allVideos: IVideo[] = [];
-
-    // access token way
-    // let after = '';
-    // while (true) {
-    //     try {
-    //         const res = await fetchExtension(
-    //             `https://graph.facebook.com/v14.0/${id}?fields=videos.limit(100)${
-    //                 after ? `.after(${after})` : ''
-    //             }{created_time,description,id,length,post_id,source,picture}&access_token=${accessToken}`
-    //         );
-    //         const json = JSON.parse(res);
-    //         console.log('all videos', json);
-    //         let added = 0;
-    //         if (json.videos?.data?.length) {
-    //             for (const video of json.videos.data) {
-    //                 if (!vidIds.has(video.id)) {
-    //                     videos.push({
-    //                         id: video.id,
-    //                         recent: videos.length,
-    //                         created_time: video.created_time,
-    //                         description: video.description,
-    //                         length: video.length,
-    //                         url: 'https://fb.com/' + video.post_id,
-    //                         source: video.source,
-    //                         picture: video.picture,
-    //                     });
-    //                     vidIds.add(video.id);
-    //                     added++;
-    //                 }
-    //             }
-    //             let stop = onProgress?.(videos);
-    //             if (stop) return videos;
-    //         }
-
-    //         let nextAfter = json.videos?.paging?.cursors?.after;
-    //         if (!nextAfter || nextAfter === after || !added) break;
-    //         after = nextAfter;
-    //     } catch (e) {
-    //         console.error(e);
-    //         break;
-    //     }
-    // }
-
-    // graphql way
-    let cursor = '';
-    while (true) {
-        try {
-            const { videos, nextCursor } = await getUserVideo({ id, cursor });
-
-            allVideos.push(...videos);
-            // TODO move inside for loop if enable getVideoInfo
-            let stop = onProgress?.(allVideos);
-            if (stop) return allVideos;
-
-            if (!nextCursor) break;
-            cursor = nextCursor;
-        } catch (e) {
-            console.error(e);
-            break;
-        }
-    }
-
-    return allVideos;
 }
 
 export async function getVideoInfo(videoId: string) {
@@ -788,6 +716,59 @@ export async function getVideoInfo(videoId: string) {
     };
 }
 // #endregion
+
+// #region files
+
+export type IGroupFile = {
+    download_url: string;
+    name: string;
+    post_url: string;
+    creation_time: number;
+    icon: string;
+    file_type: string;
+    owners: Array<{
+        id: string;
+        name: string;
+        url: string;
+    }>;
+    cursor?: string;
+};
+
+export async function getGroupFiles({ groupId = '', cursor = '' }): Promise<IGroupFile[]> {
+    const res = await fetchGraphQl({
+        fb_api_req_friendly_name: 'GroupsCometFilesTabPaginationQuery',
+        variables: {
+            count: 15,
+            cursor: cursor,
+            groupDocsFileName: null,
+            groupID: groupId,
+            orderby: 'TIME_DESC',
+            scale: 1,
+            id: groupId,
+        },
+        doc_id: '24326962373618252',
+    });
+    const json = JSON.parse(res);
+    const { edges = [], page_info = {} } = json?.data?.node?.group_docs_and_files || {};
+
+    return edges.map(
+        edge =>
+            ({
+                download_url: edge?.node?.download_url,
+                name: edge?.node?.name,
+                post_url: edge?.node?.original_post?.url,
+                creation_time: edge?.node?.original_post?.creation_time,
+                icon: edge?.node?.icon?.uri,
+                file_type: edge?.node?.file_type,
+                owners: edge?.node?.original_post?.actors.map(node => ({
+                    id: node?.id,
+                    name: node?.name,
+                    url: node?.url,
+                })),
+                cursor: page_info?.end_cursor,
+            } as IGroupFile)
+    );
+}
 
 // #endregion
 

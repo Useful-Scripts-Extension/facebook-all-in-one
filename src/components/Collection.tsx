@@ -4,6 +4,7 @@ import { useIntersectionObserver, useInterval } from 'usehooks-ts';
 import { useTranslation } from 'react-i18next';
 import Swal, { SweetAlertResult } from 'sweetalert2';
 import { promiseAllStepN } from '../utils/helper';
+import { download, showDefaultDownloadFolder } from '../utils/extension';
 
 export type Downloadable = {
     name: string;
@@ -144,20 +145,25 @@ export default function Collection<T>({
         let directDownload = downloadType.isConfirmed;
 
         // get download destination folder
-        const dirHandler = await window.showDirectoryPicker({ mode: 'readwrite' });
+        const dirHandler = await window.showDirectoryPicker({
+            mode: 'readwrite',
+            // startIn: 'downloads',
+        });
         await dirHandler.requestPermission({ writable: true });
 
         // create folder with collection name
-        const dir = await dirHandler.getDirectoryHandle(collectionName, {
+        const subDir = await dirHandler.getDirectoryHandle(collectionName, {
             create: true,
         });
 
         // start fetch and download
         const key = 'downloading_collection_' + collectionName;
+        const stoppingKey = 'stopping_downloading_collection_' + collectionName;
         message.loading({ key, content: t('Downloading') + '...', duration: 0 });
         const all = fromCursor ? [] : [...data];
         let downloaded = 0,
             failed = 0,
+            downloadedByApi = 0,
             index = 0,
             firstFetch = true,
             stopFetch = false,
@@ -192,14 +198,27 @@ export default function Collection<T>({
                         allLinks.push(url);
 
                         if (directDownload) {
-                            const blob = await (await fetch(url)).blob();
                             const fileNamePrefix = startIndex + index + i + '_';
-                            const fileHandler = await dir.getFileHandle(fileNamePrefix + name, {
-                                create: true,
-                            });
-                            const writable = await fileHandler.createWritable();
-                            await writable.write(blob);
-                            await writable.close();
+                            const fileName = fileNamePrefix + name;
+
+                            try {
+                                // try download directly, using fetch blob
+                                const blob = await (await fetch(url)).blob();
+                                const fileHandler = await subDir.getFileHandle(fileName, {
+                                    create: true,
+                                });
+                                const writable = await fileHandler.createWritable();
+                                await writable.write(blob);
+                                await writable.close();
+                            } catch (e) {
+                                // backup download: using extension api
+                                await download({
+                                    url: url,
+                                    conflictAction: 'overwrite',
+                                    filename: collectionName + '/' + fileName,
+                                });
+                                downloadedByApi++;
+                            }
                         }
                         downloaded++;
                         message.loading({
@@ -208,7 +227,13 @@ export default function Collection<T>({
                                 <span>
                                     {`${t('Downloading')}... ${downloaded}`}
                                     <br />
-                                    {failed ? `${t('Failed')}: ${failed}` : ''}
+                                    {failed ? (
+                                        <>
+                                            {t('Failed')}: ${failed} <br />
+                                        </>
+                                    ) : (
+                                        ''
+                                    )}
                                     {collectionName}
                                     <br />
                                     <i>{t('Click to stop')}</i>
@@ -218,6 +243,11 @@ export default function Collection<T>({
                             onClick: () => {
                                 stopFetch = true;
                                 stopQueue();
+                                message.loading({
+                                    key: stoppingKey,
+                                    content: t('Stopping...'),
+                                    duration: 0,
+                                });
                             },
                         });
                     } catch (e) {
@@ -233,7 +263,7 @@ export default function Collection<T>({
         }
 
         if (!directDownload) {
-            const fileHandler = await dir.getFileHandle('links.txt', { create: true });
+            const fileHandler = await subDir.getFileHandle('links.txt', { create: true });
             const writable = await fileHandler.createWritable();
             await writable.write(allLinks.join('\n'));
             await writable.close();
@@ -242,6 +272,23 @@ export default function Collection<T>({
         // show result
         const cursor = getItemCursor?.(all[all.length - 1]);
         message.destroy(key);
+        message.destroy(stoppingKey);
+
+        if (downloadedByApi > 0) {
+            notification.info({
+                type: 'info',
+                message: t('In Download/ folder') + ': ' + downloadedByApi,
+                description: t(
+                    'Files that cannot be normal downloaded, will be force download into default Download folder of your browser'
+                ),
+                duration: 0,
+                btn: (
+                    <Button onClick={showDefaultDownloadFolder}>
+                        {t('Show Download/ folder')}
+                    </Button>
+                ),
+            });
+        }
         notification.success({
             type: 'success',
             message: t(stopFetch ? 'Download stopped' : 'Download finished'),
@@ -253,6 +300,11 @@ export default function Collection<T>({
                     <li>
                         <b>{t('Downloaded')}:</b> {downloaded}
                     </li>
+                    {downloadedByApi > 0 && (
+                        <li>
+                            <b>{t('In Download/ folder')}:</b> {downloadedByApi}
+                        </li>
+                    )}
                     <li>
                         <b>{t('Last index')}:</b> {index + startIndex}
                     </li>
@@ -262,13 +314,15 @@ export default function Collection<T>({
                 </ul>
             ),
             duration: 0,
-            btn: stopFetch ? (
+            btn: (
                 <Space direction="horizontal">
-                    <Button onClick={() => downloadAll(cursor, index + startIndex)}>
-                        {t('Continue download')}
-                    </Button>
+                    {stopFetch ? (
+                        <Button onClick={() => downloadAll(cursor, index + startIndex)}>
+                            {t('Continue download')}
+                        </Button>
+                    ) : null}
                 </Space>
-            ) : null,
+            ),
         });
 
         // save cache

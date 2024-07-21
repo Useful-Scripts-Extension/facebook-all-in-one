@@ -152,6 +152,13 @@
         "Direct Download": "Tải trực tiếp",
         "Only Links": "Chỉ tải link",
         "Download failed": "Lỗi tải",
-        "Failed": "Lỗi"
+        "Failed": "Lỗi",
+        "Stopping...": "Đang dừng...",
+
+        "View post": "Xem bài viết",
+        "No download link": "Không có link tải",
+        "In Download/ folder": "Trong folder Download/",
+        "Show Download/ folder": "Mở folder Download/",
+        "Files that cannot be normal downloaded, will be force download into default Download folder of your browser": "Những file không thể tải bình thường, sẽ được tải vào trong folder Download/ mặc định của trình duyệt"
     }
 }

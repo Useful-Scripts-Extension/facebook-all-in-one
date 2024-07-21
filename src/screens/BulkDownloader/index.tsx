@@ -7,6 +7,7 @@ const Albums = React.lazy(() => import('./Albums'));
 const Videos = React.lazy(() => import('./Videos'));
 const Photos = React.lazy(() => import('./Photos'));
 const Album = React.lazy(() => import('./Album'));
+const GroupFiles = React.lazy(() => import('./GroupFiles'));
 
 const { Search } = Input;
 
@@ -15,6 +16,7 @@ const enum TabKey {
     Videos = 'Videos',
     Photos = 'Photos',
     Album = 'Album-',
+    Files = 'Files',
 }
 
 type Tab = {
@@ -28,6 +30,7 @@ const DefaultTabs: Tab[] = [
     { key: TabKey.Photos, label: TabKey.Photos, closable: false },
     { key: TabKey.Videos, label: TabKey.Videos, closable: false },
     { key: TabKey.Albums, label: TabKey.Albums, closable: false },
+    { key: TabKey.Files, label: TabKey.Files, closable: false },
 ];
 
 export default function BulkDownloader() {
@@ -141,6 +144,9 @@ export default function BulkDownloader() {
                 return <Videos target={about} />;
             case TabKey.Albums:
                 return <Albums target={about} onOpenAlbum={onOpenAlbum} />;
+            case TabKey.Files:
+                if (targetType === TargetType.Group) return <GroupFiles target={about} />;
+                return null;
             default:
                 if (tab.key.startsWith(TabKey.Album)) {
                     return <Album target={about} album={tab.props?.album} />;
@@ -150,15 +156,17 @@ export default function BulkDownloader() {
     };
 
     const tabItems: TabsProps['items'] = about
-        ? tabs.map(tab => {
-              const comp = getComp(tab);
-              return {
-                  key: tab.key,
-                  label: tab.label,
-                  closable: tab.closable,
-                  children: comp,
-              };
-          })
+        ? tabs
+              .map(tab => {
+                  const comp = getComp(tab);
+                  return {
+                      key: tab.key,
+                      label: tab.label,
+                      closable: tab.closable,
+                      children: comp,
+                  };
+              })
+              .filter(_ => _.children)
         : [];
 
     return (

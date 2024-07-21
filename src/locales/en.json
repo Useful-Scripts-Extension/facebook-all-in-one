@@ -135,6 +135,14 @@
         "Direct Download": "Direct Download",
         "Only Links": "Only Links",
         "Download failed": "Download failed",
-        "Failed": "Failedi"
+        "Failed": "Failed",
+
+        "Stopping...": "Stopping...",
+
+        "View post": "View post",
+        "No download link": "No download link",
+        "In Download/ folder": "In Download/ folder",
+        "Show Download/ folder": "Show Download/ folder",
+        "Files that cannot be normal downloaded, will be force download into default Download folder of your browser": "Files that cannot be normal downloaded, will be force download into default Download folder of your browsert"
     }
 }

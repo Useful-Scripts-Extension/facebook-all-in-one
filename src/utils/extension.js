@@ -8,6 +8,14 @@ export function fetchExtension(url, options) {
     return runExtFunc('fetch', [url, options]);
 }
 
+export function download(options) {
+    return runExtFunc('chrome.downloads.download', [options]);
+}
+
+export function showDefaultDownloadFolder() {
+    return runExtFunc('chrome.downloads.showDefaultFolder', []);
+}
+
 export function sendMessage(data) {
     return new Promise((resolve, reject) => {
         if (!window || !window?.chrome?.runtime)
