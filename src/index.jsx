@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { HashRouter } from 'react-router-dom';
 import { App, ConfigProvider, theme } from 'antd';
 import useStore, { selectors } from './store';
 import './locales';
@@ -17,9 +17,9 @@ export function Container() {
                 theme={{ algorithm: darkMode ? theme.darkAlgorithm : theme.lightAlgorithm }}
             >
                 <App>
-                    <BrowserRouter future={{ v7_startTransition: true }}>
+                    <HashRouter>
                         <MyApp />
-                    </BrowserRouter>
+                    </HashRouter>
                 </App>
             </ConfigProvider>
         </StrictMode>
