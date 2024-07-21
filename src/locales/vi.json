@@ -159,6 +159,7 @@
         "No download link": "Không có link tải",
         "In Download/ folder": "Trong folder Download/",
         "Show Download/ folder": "Mở folder Download/",
-        "Files that cannot be normal downloaded, will be force download into default Download folder of your browser": "Những file không thể tải bình thường, sẽ được tải vào trong folder Download/ mặc định của trình duyệt"
+        "Files that cannot be normal downloaded, will be force download into default Download folder of your browser": "Những file không thể tải bình thường, sẽ được tải vào trong folder Download/ mặc định của trình duyệt",
+        "Tip: Use Useful-script extension to get ID": "Gợi ý: Sử dụng Useful-script để lấy ID"
     }
 }

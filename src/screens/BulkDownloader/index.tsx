@@ -1,5 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Space, Tabs, TabsProps, Input, Card, Avatar, FloatButton, message } from 'antd';
+import {
+    Space,
+    Tabs,
+    TabsProps,
+    Input,
+    Card,
+    Avatar,
+    FloatButton,
+    message,
+    Image,
+    Alert,
+} from 'antd';
 import { useTranslation } from 'react-i18next';
 import {
     getEntityAbout,
@@ -10,6 +21,7 @@ import {
     trackEvent,
 } from '../../utils/facebook';
 import { useLocation } from 'react-router-dom';
+import img_getId from '../../assets/get_id.png';
 
 const Albums = React.lazy(() => import('./Albums'));
 const Videos = React.lazy(() => import('./Videos'));
@@ -240,7 +252,20 @@ export default function BulkDownloader() {
                     onChange={onChangeTab}
                     onEdit={onEdit}
                 />
-            ) : null}
+            ) : (
+                <Space
+                    direction="vertical"
+                    align="center"
+                    style={{ width: '100%', marginTop: 100 }}
+                >
+                    <Alert
+                        type="info"
+                        showIcon
+                        message={t('Tip: Use Useful-script extension to get ID')}
+                    />
+                    <Image src={img_getId} width={300} />
+                </Space>
+            )}
 
             <FloatButton.BackTop />
         </Space>
