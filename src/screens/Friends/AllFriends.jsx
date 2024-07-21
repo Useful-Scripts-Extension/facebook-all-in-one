@@ -32,6 +32,7 @@ import dayjs from 'dayjs';
 import { produce } from 'immer';
 import useStateStore from '../../hooks/useStateStore';
 import UploadModal from '../../components/UploadModal';
+import { useNavigate } from 'react-router-dom';
 
 const { Title } = Typography;
 
@@ -68,6 +69,7 @@ const canUnfriend = friend => {
 
 export default function AllFriends() {
     const { message, notification } = App.useApp();
+    const navigate = useNavigate();
     const { t } = useTranslation();
 
     const profile = useStore(selectors.profile);
@@ -410,6 +412,12 @@ export default function AllFriends() {
         }
     };
 
+    const onClickBulkDownload = record => {
+        navigate('/bulk-downloader', {
+            state: { targetId: record.uid },
+        });
+    };
+
     const columns = [
         {
             title: '#',
@@ -481,6 +489,13 @@ export default function AllFriends() {
             key: 'download',
             render: (text, record, index) => (
                 <Space.Compact>
+                    <Tooltip title={t('Bulk Downloader')}>
+                        <Button
+                            type="default"
+                            onClick={() => onClickBulkDownload(record)}
+                            icon={<i className="fa-solid fa-download"></i>}
+                        ></Button>
+                    </Tooltip>
                     <Tooltip title={t('Poke')}>
                         <Popconfirm
                             title={t('Poke friend')}

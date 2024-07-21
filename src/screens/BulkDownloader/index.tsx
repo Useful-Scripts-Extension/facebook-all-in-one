@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Space, Tabs, TabsProps, Input, Card, Avatar, FloatButton, message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import {
@@ -9,6 +9,7 @@ import {
     TargetType,
     trackEvent,
 } from '../../utils/facebook';
+import { useLocation } from 'react-router-dom';
 
 const Albums = React.lazy(() => import('./Albums'));
 const Videos = React.lazy(() => import('./Videos'));
@@ -45,12 +46,15 @@ const DefaultTabs: Tab[] = [
 
 export default function BulkDownloader() {
     const { t } = useTranslation();
+    const location = useLocation();
+
+    const _targetId = location.state?.targetId || '';
 
     const [activeKey, setActiveKey] = useState<string>('');
     const [tabs, setTabs] = useState(DefaultTabs);
     const [loading, setLoading] = useState(false);
     const [about, setAbout] = useState(null as IEntityAbout | null);
-    const [targetId, setTargetId] = useState(''); //100050164073708
+    const [targetId, setTargetId] = useState(_targetId);
 
     const targetType = about?.type || TargetType.User;
 
@@ -79,17 +83,16 @@ export default function BulkDownloader() {
         }
     }, [targetType]);
 
-    // useEffect(() => {
-    //     const timeout = setTimeout(onSearch, 500);
-    //     return () => clearTimeout(timeout);
-    // }, [targetId]);
+    useEffect(() => {
+        if (_targetId) onSearch(_targetId);
+    }, [_targetId]);
 
-    const onSearch = () => {
+    const onSearch = (id = targetId) => {
         trackEvent('BulkDownloader:onSearch');
         setLoading(true);
 
-        getUserReels({ id: targetId });
-        getEntityAbout(targetId)
+        getUserReels({ id });
+        getEntityAbout(id)
             .then(data => {
                 console.log(data);
                 setAbout(data);
@@ -203,7 +206,7 @@ export default function BulkDownloader() {
                     size="large"
                     style={{ width: 350 }}
                     onChange={e => setTargetId(e.target.value)}
-                    onSearch={onSearch}
+                    onSearch={() => onSearch()}
                     enterButton={loading ? null : <i className="fa-solid fa-magnifying-glass"></i>}
                     loading={loading}
                 />
