@@ -143,6 +143,7 @@
         "No download link": "No download link",
         "In Download/ folder": "In Download/ folder",
         "Show Download/ folder": "Show Download/ folder",
-        "Files that cannot be normal downloaded, will be force download into default Download folder of your browser": "Files that cannot be normal downloaded, will be force download into default Download folder of your browsert"
+        "Files that cannot be normal downloaded, will be force download into default Download folder of your browser": "Files that cannot be normal downloaded, will be force download into default Download folder of your browsert",
+        "Tip: Use Useful-script extension to get ID": "Tip: Use Useful-script extension to get ID"
     }
 }
