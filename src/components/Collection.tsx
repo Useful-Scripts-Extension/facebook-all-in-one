@@ -3,8 +3,9 @@ import { App, Button, List, Space } from 'antd';
 import { useIntersectionObserver, useInterval } from 'usehooks-ts';
 import { useTranslation } from 'react-i18next';
 import Swal, { SweetAlertResult } from 'sweetalert2';
-import { promiseAllStepN } from '../utils/helper';
 import { download, showDefaultDownloadFolder } from '../utils/extension';
+import { promiseAllStepN } from '../utils/helper';
+import { trackEvent } from '../utils/facebook';
 
 export type Downloadable = {
     name: string;
@@ -143,6 +144,8 @@ export default function Collection<T>({
         });
         if (downloadType.isDismissed) return;
         let directDownload = downloadType.isConfirmed;
+
+        trackEvent('downloadCollection:' + collectionName);
 
         // get download destination folder
         const dirHandler = await window.showDirectoryPicker({
