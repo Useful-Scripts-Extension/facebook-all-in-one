@@ -27,8 +27,9 @@ const Albums = React.lazy(() => import('./Albums'));
 const Videos = React.lazy(() => import('./Videos'));
 const Photos = React.lazy(() => import('./Photos'));
 const Album = React.lazy(() => import('./Album'));
-const GroupFiles = React.lazy(() => import('./GroupFiles'));
 const Reels = React.lazy(() => import('./Reels'));
+const GroupFiles = React.lazy(() => import('./GroupFiles'));
+const GroupMembers = React.lazy(() => import('./GroupMembers'));
 
 const { Search } = Input;
 
@@ -37,8 +38,9 @@ const enum TabKey {
     Videos = 'Videos',
     Photos = 'Photos',
     Album = 'Album-',
-    Files = 'Files',
     Reels = 'Reels',
+    GroupFiles = 'Files',
+    GroupMembers = 'Members',
 }
 
 type Tab = {
@@ -52,8 +54,9 @@ const DefaultTabs: Tab[] = [
     { key: TabKey.Photos, label: TabKey.Photos, closable: false },
     { key: TabKey.Videos, label: TabKey.Videos, closable: false },
     { key: TabKey.Albums, label: TabKey.Albums, closable: false },
-    { key: TabKey.Files, label: TabKey.Files, closable: false },
     { key: TabKey.Reels, label: TabKey.Reels, closable: false },
+    { key: TabKey.GroupFiles, label: TabKey.GroupFiles, closable: false },
+    { key: TabKey.GroupMembers, label: TabKey.GroupMembers, closable: false },
 ];
 
 export default function BulkDownloader() {
@@ -171,11 +174,15 @@ export default function BulkDownloader() {
                 return <Videos target={about} />;
             case TabKey.Albums:
                 return <Albums target={about} onOpenAlbum={onOpenAlbum} />;
-            case TabKey.Files:
+            case TabKey.Reels:
+                if (targetType !== TargetType.Group) return <Reels target={about} />;
+                return null;
+            case TabKey.GroupFiles:
                 if (targetType === TargetType.Group) return <GroupFiles target={about} />;
                 return null;
-            case TabKey.Reels:
-                return <Reels target={about} />;
+            case TabKey.GroupMembers:
+                if (targetType === TargetType.Group) return <GroupMembers target={about} />;
+                return null;
             default:
                 if (tab.key.startsWith(TabKey.Album)) {
                     return <Album target={about} album={tab.props?.album} />;
