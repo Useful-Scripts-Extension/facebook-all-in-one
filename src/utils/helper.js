@@ -111,3 +111,35 @@ export function promiseAllStepN(n, list) {
         },
     };
 }
+
+// https://github.com/parshap/node-sanitize-filename/blob/master/index.js
+// https://github.com/Dinoosauro/tiktok-to-ytdlp/blob/main/script.js
+export function sanitizeName(name, modifyIfPosible = true) {
+    if (typeof name !== 'string') {
+        throw new Error('Input must be string');
+    }
+    const replacement = '';
+    const illegalRe = /[\/\?<>\\:\*\|"]/g;
+    const controlRe = /[\x00-\x1f\x80-\x9f]/g;
+    const reservedRe = /^\.+$/;
+    const windowsReservedRe = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
+    const windowsTrailingRe = /[\. ]+$/;
+    if (modifyIfPosible) {
+        name = name
+            .replaceAll('<', '‹')
+            .replaceAll('>', '›')
+            .replaceAll(':', '∶')
+            .replaceAll('"', '″')
+            .replaceAll('/', '∕')
+            .replaceAll('\\', '∖')
+            .replaceAll('|', '¦')
+            .replaceAll('?', '¿');
+    }
+    const sanitized = name
+        .replace(illegalRe, replacement)
+        .replace(controlRe, replacement)
+        .replace(reservedRe, replacement)
+        .replace(windowsReservedRe, replacement)
+        .replace(windowsTrailingRe, replacement);
+    return sanitized; // TODO truncates to length of 255
+}
