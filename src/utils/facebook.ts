@@ -1,5 +1,7 @@
 import lodash_get from 'lodash/get';
 import { fetchExtension, runExtFunc } from './extension';
+import { notification } from 'antd';
+import i18n from '../locales';
 
 export enum ACCESS_TOKEN_TYPE {
     EAAG = 'EAAG',
@@ -38,12 +40,35 @@ export async function fetchGraphQl(params: object | string = {}, url: string = '
             ...params,
         });
 
-    return fetchExtension(url || 'https://www.facebook.com/api/graphql/', {
+    const res = await fetchExtension(url || 'https://www.facebook.com/api/graphql/', {
         body: query + '&fb_dtsg=' + (await getFbDtsg()),
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         credentials: 'include',
     });
+
+    // check error response
+    try {
+        const json = JSON.parse(res);
+        if (json.errors) {
+            const { summary, message, description_raw } = json.errors[0];
+            if (summary) {
+                console.log(json);
+
+                const div = document.createElement('div');
+                div.innerHTML = description_raw?.__html;
+                const description = div.innerText;
+
+                notification.error({
+                    message: i18n.t('Facebook response Error'),
+                    description: summary + '. ' + message + '. ' + description,
+                    duration: 0,
+                });
+            }
+        }
+    } catch (e) {}
+
+    return res;
 }
 
 export function wrapGraphQlParams(params = {}) {
@@ -61,7 +86,7 @@ export function wrapGraphQlParams(params = {}) {
 }
 
 export async function trackEvent(scriptId: string) {
-    // return;
+    return;
     const text = await fetchExtension('https://useful-script-statistic.glitch.me/count', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -183,17 +208,19 @@ export async function getEntityAbout(entityID: string, context = 'DEFAULT'): Pro
     const json = JSON.parse(res);
     const node = json.data.node;
     if (!node) throw new Error('Wrong ID / Entity not found');
-    const type = node.__typename.toLowerCase();
-    if (!Object.values(TargetType).includes(type)) throw new Error('Not supported type: ' + type);
-    const card = node.comet_hovercard_renderer[type];
+    const typeText = node.__typename.toLowerCase();
+    if (!Object.values(TargetType).includes(typeText))
+        throw new Error('Not supported type: ' + typeText);
+    const card = node.comet_hovercard_renderer[typeText];
+    const type =
+        typeText === 'user'
+            ? card.profile_plus_transition_path?.startsWith('PAGE')
+                ? TargetType.Page
+                : TargetType.User
+            : TargetType.Group;
 
     return {
-        type:
-            type === 'user'
-                ? card.profile_plus_transition_path?.startsWith('PAGE')
-                    ? TargetType.Page
-                    : TargetType.User
-                : TargetType.Group,
+        type,
         id: node.id || card.id,
         name: card.name,
         avatar: card.profile_picture.uri,
@@ -1165,6 +1192,100 @@ export async function getAllLockedFriends({ myUid, onFound, onPage }) {
         pageNum++;
     }
     return lockedFriends;
+}
+
+// #endregion
+
+// #region group
+export enum GropuStatusStaticFilter {
+    ALL_STATUSES = 'ALL_STATUSES', // Tất cả trạng thái
+    UNAVAILABLE = 'UNAVAILABLE', // Bị vô hiệu hoá tài khoản
+    PAGES = 'PAGES', // Trang
+    INVITED = 'INVITED', // Được mời tham gia
+    NEEDS_POST_APPROVAL = 'NEEDS_POST_APPROVAL', // Cần phê duyệt bài viết
+    PREAPPROVED = 'PREAPPROVED', // Đã phê duyệt trước
+    BLOCKED = 'BLOCKED', // Bị cấm
+    MUTED = 'MUTED', // Bị đình chỉ
+}
+export enum GroupMembershipType {
+    ALL = 'ALL',
+    MEMBER = 'MEMBER',
+    VISITOR = 'VISITOR',
+}
+export type IGroupMember = {
+    id: string;
+    name: string;
+    avatar: string;
+    // type: 'User' | 'Page';
+    url: string;
+    joinedTime: string;
+    lastActiveTime: string;
+    cursor: string;
+    recent?: number;
+};
+
+export async function getGroupMembers({
+    groupId,
+    cursor,
+    search,
+    statusFilter = GropuStatusStaticFilter.ALL_STATUSES,
+}: {
+    groupId: string;
+    cursor?: string;
+    search?: string;
+    statusFilter?: GropuStatusStaticFilter;
+}): Promise<IGroupMember[]> {
+    const res = await fetchGraphQl({
+        fb_api_req_friendly_name: 'GroupsCometPeopleProfilesPaginatedListPaginationQuery',
+        variables: {
+            count: 10,
+            cursor,
+            groupID: groupId,
+            membershipType: GroupMembershipType.MEMBER,
+            scale: 1,
+            search: search,
+            statusStaticFilter: statusFilter,
+            id: groupId,
+        },
+        doc_id: '7804285152989966',
+    });
+    const json = JSON.parse(res);
+    console.log(json);
+
+    const { edges = [], page_info = {} } = json?.data?.node?.people_profiles || {};
+    return edges.map(edge => {
+        const metas = edge?.membership?.meta_lines?.nodes || [];
+        return {
+            id: edge?.node?.id,
+            name: edge?.node?.name,
+            avatar: edge?.node?.profile_picture?.uri,
+            url: edge?.node?.profile_url,
+            joinedTime: metas.find(_ => _.__typename === 'GroupsProfileJoinedTimeMetaline')?.text
+                ?.text,
+            lastActiveTime: metas.find(
+                _ => _.__typename === 'GroupsProfileLastActivityTimeMetaline'
+            )?.text?.text,
+            cursor: page_info?.end_cursor,
+        } as IGroupMember;
+    });
+}
+
+export async function getGroupMemberCount({ groupId }) {
+    const res = await fetchGraphQl({
+        fb_api_req_friendly_name: 'GroupsCometMembersRootQuery',
+        variables: {
+            groupID: groupId,
+            recruitingGroupFilterNonCompliant: false,
+            scale: 2,
+        },
+        doc_id: '26783674461231929',
+    });
+    const json = JSON.parse(res);
+    return (
+        json?.data?.group?.all_active_members?.count ||
+        json?.data?.group?.group_member_profiles?.count ||
+        0
+    );
 }
 
 // #endregion
