@@ -144,6 +144,10 @@
         "In Download/ folder": "In Download/ folder",
         "Show Download/ folder": "Show Download/ folder",
         "Files that cannot be normal downloaded, will be force download into default Download folder of your browser": "Files that cannot be normal downloaded, will be force download into default Download folder of your browsert",
-        "Tip: Use Useful-script extension to get ID": "Tip: Use Useful-script extension to get ID"
+        "Tip: Use Useful-script extension to get ID": "Tip: Use Useful-script extension to get ID",
+
+        "Facebook response Error": "Facebook response Error",
+        "Browser not supported": "Browser not supported",
+        "File saver API not supported in this browser. Please use newest version of Edge or Chrome. (window.showDirectoryPicker)": "File saver API not supported in this browser. Please use newest version of Edge or Chrome. (window.showDirectoryPicker)"
     }
 }

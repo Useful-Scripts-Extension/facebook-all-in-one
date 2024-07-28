@@ -72,6 +72,16 @@ export default function Collection<T>({
     const downloadAll = async (fromCursor?: string, startIndex = 0) => {
         if (!downloadItem) return;
 
+        if (!('showDirectoryPicker' in window)) {
+            return Swal.fire({
+                icon: 'error',
+                title: t('Browser not supported'),
+                text: t(
+                    'File saver API not supported in this browser. Please use newest version of Edge or Chrome. (window.showDirectoryPicker)'
+                ),
+            });
+        }
+
         // download position
         let downloadPosition: SweetAlertResult | undefined;
         if (!fromCursor) {
