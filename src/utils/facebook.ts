@@ -15,6 +15,7 @@ const CACHED: {
     access_token: {
         [key in ACCESS_TOKEN_TYPE]: string | null;
     };
+    ufsVersion?: string;
 } = {
     uid: null,
     fb_dtsg: null,
@@ -23,6 +24,7 @@ const CACHED: {
         [ACCESS_TOKEN_TYPE.EAAG]: null,
         [ACCESS_TOKEN_TYPE.EAAB]: null,
     },
+    ufsVersion: undefined,
 };
 
 // #region helper
@@ -85,14 +87,22 @@ export function wrapGraphQlParams(params = {}) {
     return formBody.join('&');
 }
 
+export async function getUfsVersion() {
+    if (!CACHED.ufsVersion) {
+        const manifest = await runExtFunc('chrome.runtime.getManifest');
+        CACHED.ufsVersion = manifest?.version || 'unknown';
+    }
+    return CACHED.ufsVersion;
+}
+
 export async function trackEvent(scriptId: string) {
-    return;
+    // return;
     const text = await fetchExtension('https://useful-script-statistic.glitch.me/count', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             script: 'fb_aio_' + scriptId,
-            version: '1.68',
+            version: '1.7',
             uid: await getMyUid(),
         }),
     });
