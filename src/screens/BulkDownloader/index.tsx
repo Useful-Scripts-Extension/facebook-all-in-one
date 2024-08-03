@@ -5,7 +5,6 @@ import {
     TabsProps,
     Input,
     Card,
-    Avatar,
     FloatButton,
     message,
     Image,
@@ -18,6 +17,8 @@ import { useLocation } from 'react-router-dom';
 import { getInstaUserInfo } from '../../utils/instagram';
 import img_getFbId from '../../assets/fb_get_id.png';
 import img_getInstaName from '../../assets/insta_get_username.png';
+import fb_icon from '../../assets/fb_icon.png';
+import insta_icon from '../../assets/insta_icon.png';
 
 const Albums = React.lazy(() => import('./Albums'));
 const Videos = React.lazy(() => import('./Videos'));
@@ -291,7 +292,20 @@ export default function BulkDownloader() {
                         <Card style={{ maxWidth: 500 }} actions={[]}>
                             <Card.Meta
                                 avatar={
-                                    <Avatar crossOrigin="anonymous" size={60} src={about.avatar} />
+                                    <Image
+                                        src={about.avatar}
+                                        preview={false}
+                                        style={{
+                                            width: 60,
+                                            height: 60,
+                                            borderRadius: '50%',
+                                            overflow: 'hidden',
+                                        }}
+                                        alt={about.name}
+                                        fallback={
+                                            about?.type === TargetType.IGUser ? insta_icon : fb_icon
+                                        }
+                                    />
                                 }
                                 title={
                                     <a href={about.url} target="_blank">
