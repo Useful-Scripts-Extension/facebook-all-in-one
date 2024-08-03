@@ -10,18 +10,14 @@ import {
     message,
     Image,
     Alert,
+    Select,
 } from 'antd';
 import { useTranslation } from 'react-i18next';
-import {
-    getEntityAbout,
-    getUserReels,
-    IAlbum,
-    IEntityAbout,
-    TargetType,
-    trackEvent,
-} from '../../utils/facebook';
+import { getEntityAbout, IAlbum, IEntityAbout, TargetType, trackEvent } from '../../utils/facebook';
 import { useLocation } from 'react-router-dom';
-import img_getId from '../../assets/get_id.png';
+import { getInstaUserInfo } from '../../utils/instagram';
+import img_getFbId from '../../assets/fb_get_id.png';
+import img_getInstaName from '../../assets/insta_get_username.png';
 
 const Albums = React.lazy(() => import('./Albums'));
 const Videos = React.lazy(() => import('./Videos'));
@@ -30,10 +26,13 @@ const Album = React.lazy(() => import('./Album'));
 const Reels = React.lazy(() => import('./Reels'));
 const GroupFiles = React.lazy(() => import('./GroupFiles'));
 const GroupMembers = React.lazy(() => import('./GroupMembers'));
+const IGPosts = React.lazy(() => import('./IGPosts'));
+const IGReels = React.lazy(() => import('./IGReels'));
 
 const { Search } = Input;
 
 const enum TabKey {
+    // facebook
     Albums = 'Albums',
     Videos = 'Videos',
     Photos = 'Photos',
@@ -41,6 +40,10 @@ const enum TabKey {
     Reels = 'Reels',
     GroupFiles = 'Files',
     GroupMembers = 'Members',
+
+    // instagram
+    IGPosts = 'IGPosts',
+    IGReels = 'IGReels',
 }
 
 type Tab = {
@@ -50,7 +53,12 @@ type Tab = {
     props?: any;
 };
 
-const DefaultTabs: Tab[] = [
+const Platforms = {
+    Facebook: 'Facebook',
+    Instagram: 'Instagram',
+};
+
+const DefaultFBTabs: Tab[] = [
     { key: TabKey.Photos, label: TabKey.Photos, closable: false },
     { key: TabKey.Videos, label: TabKey.Videos, closable: false },
     { key: TabKey.Albums, label: TabKey.Albums, closable: false },
@@ -59,14 +67,20 @@ const DefaultTabs: Tab[] = [
     { key: TabKey.GroupMembers, label: TabKey.GroupMembers, closable: false },
 ];
 
+const DefaultIGTabs: Tab[] = [
+    { key: TabKey.IGPosts, label: TabKey.IGPosts, closable: false },
+    { key: TabKey.IGReels, label: TabKey.IGReels, closable: false },
+];
+
 export default function BulkDownloader() {
     const { t } = useTranslation();
     const location = useLocation();
 
     const _targetId = location.state?.targetId || '';
 
-    const [activeKey, setActiveKey] = useState<string>('');
-    const [tabs, setTabs] = useState(DefaultTabs);
+    const [activeTab, setActiveTab] = useState<string>('');
+    const [platform, setPlatform] = useState(Platforms.Facebook);
+    const [tabs, setTabs] = useState(DefaultFBTabs);
     const [loading, setLoading] = useState(false);
     const [about, setAbout] = useState(null as IEntityAbout | null);
     const [targetId, setTargetId] = useState(_targetId);
@@ -93,6 +107,12 @@ export default function BulkDownloader() {
                         <i className="fa-solid fa-pager"></i> Page
                     </Space>
                 );
+            case TargetType.IGUser:
+                return (
+                    <Space>
+                        <i className="fa-brands fa-instagram"></i> Instagram
+                    </Space>
+                );
             default:
                 return 'Unknow';
         }
@@ -102,26 +122,42 @@ export default function BulkDownloader() {
         if (_targetId) onSearch(_targetId);
     }, [_targetId]);
 
+    const onChangePlatform = value => {
+        trackEvent('BulkDownloader:onChangePlatform:' + value);
+        setPlatform(value);
+    };
+
     const onSearch = (id = targetId) => {
-        trackEvent('BulkDownloader:onSearch');
+        trackEvent('BulkDownloader:onSearch_' + platform + ':' + id);
         setLoading(true);
 
-        getUserReels({ id });
-        getEntityAbout(id)
-            .then(data => {
-                console.log(data);
-                setAbout(data);
-                setTabs(DefaultTabs);
-            })
-            .catch(e => {
-                message.error(e.message);
-            })
-            .finally(() => setLoading(false));
+        if (platform === Platforms.Facebook) {
+            getEntityAbout(id)
+                .then(data => {
+                    console.log(data);
+                    setAbout(data);
+                    setTabs(DefaultFBTabs);
+                })
+                .catch(e => {
+                    message.error(e.message);
+                })
+                .finally(() => setLoading(false));
+        } else if (platform === Platforms.Instagram) {
+            getInstaUserInfo(id)
+                .then(async user => {
+                    setAbout(user);
+                    setTabs(DefaultIGTabs);
+                })
+                .catch(e => {
+                    message.error(e.message);
+                })
+                .finally(() => setLoading(false));
+        }
     };
 
     const onChangeTab = key => {
         trackEvent('BulkDownloader:onChangeTab:' + key);
-        setActiveKey(key);
+        setActiveTab(key);
     };
 
     const onEdit = (
@@ -129,7 +165,7 @@ export default function BulkDownloader() {
         action: 'add' | 'remove'
     ) => {
         if (action === 'remove') {
-            let newActiveKey = activeKey;
+            let newActiveKey = activeTab;
             let lastIndex = -1;
             tabs.forEach((item, i) => {
                 if (item.key === targetKey) {
@@ -145,7 +181,7 @@ export default function BulkDownloader() {
                 }
             }
             setTabs(newPanes);
-            setActiveKey(newActiveKey);
+            setActiveTab(newActiveKey);
         }
     };
 
@@ -163,7 +199,7 @@ export default function BulkDownloader() {
                 },
             },
         ]);
-        setActiveKey(tabKey);
+        setActiveTab(tabKey);
     };
 
     const getComp = (tab: Tab) => {
@@ -183,6 +219,10 @@ export default function BulkDownloader() {
             case TabKey.GroupMembers:
                 if (targetType === TargetType.Group) return <GroupMembers target={about} />;
                 return null;
+            case TabKey.IGPosts:
+                return <IGPosts />;
+            case TabKey.IGReels:
+                return <IGReels />;
             default:
                 if (tab.key.startsWith(TabKey.Album)) {
                     return <Album target={about} album={tab.props?.album} />;
@@ -221,13 +261,28 @@ export default function BulkDownloader() {
 
                 <Search
                     value={targetId}
-                    placeholder={t('Enter id of user/page/group')}
+                    placeholder={
+                        platform === Platforms.Facebook
+                            ? t('Enter fb id of user/page/group')
+                            : t('Enter insta username')
+                    }
                     size="large"
-                    style={{ width: 350 }}
+                    style={{ width: 470 }}
                     onChange={e => setTargetId(e.target.value)}
                     onSearch={() => onSearch()}
                     enterButton={loading ? null : <i className="fa-solid fa-magnifying-glass"></i>}
                     loading={loading}
+                    addonBefore={
+                        <Select
+                            onChange={onChangePlatform}
+                            style={{ width: 120 }}
+                            value={platform}
+                            options={Object.entries(Platforms).map(([key, value]) => ({
+                                label: key,
+                                value: value,
+                            }))}
+                        />
+                    }
                 />
 
                 {/* render about :id, url,avatar, name */}
@@ -235,7 +290,9 @@ export default function BulkDownloader() {
                     <Space>
                         <Card style={{ maxWidth: 500 }} actions={[]}>
                             <Card.Meta
-                                avatar={<Avatar size={60} src={about.avatar} />}
+                                avatar={
+                                    <Avatar crossOrigin="anonymous" size={60} src={about.avatar} />
+                                }
                                 title={
                                     <a href={about.url} target="_blank">
                                         {about.name}
@@ -250,8 +307,8 @@ export default function BulkDownloader() {
 
             {tabItems.length ? (
                 <Tabs
-                    defaultActiveKey={activeKey}
-                    activeKey={activeKey}
+                    defaultActiveKey={activeTab}
+                    activeKey={activeTab}
                     type="editable-card"
                     centered
                     hideAdd
@@ -268,9 +325,16 @@ export default function BulkDownloader() {
                     <Alert
                         type="info"
                         showIcon
-                        message={t('Tip: Use Useful-script extension to get ID')}
+                        message={
+                            platform === Platforms.Facebook
+                                ? t('Tip: Use Useful-script extension to get ID')
+                                : t('Tip: Get instagram user name here')
+                        }
                     />
-                    <Image src={img_getId} width={300} />
+                    <Image
+                        src={platform === Platforms.Facebook ? img_getFbId : img_getInstaName}
+                        height={200}
+                    />
                 </Space>
             )}
 
