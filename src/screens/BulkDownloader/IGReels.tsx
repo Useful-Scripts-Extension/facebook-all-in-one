@@ -3,6 +3,7 @@ import { List, Image } from 'antd';
 import Collection from '../../components/Collection';
 import { IEntityAbout } from '../../utils/facebook';
 import { getInstaReels, IGReel } from '../../utils/instagram';
+import { formatNumber } from '../../utils/helper';
 
 export default function IGReels({ target }: { readonly target: IEntityAbout | null }) {
     const fetchNext = useCallback(
@@ -22,8 +23,8 @@ export default function IGReels({ target }: { readonly target: IEntityAbout | nu
             <List.Item>
                 <Image
                     src={item.image}
-                    width={230}
-                    height={360}
+                    width={200}
+                    height={330}
                     style={{ objectFit: 'cover' }}
                     preview={{
                         destroyOnClose: true,
@@ -39,12 +40,40 @@ export default function IGReels({ target }: { readonly target: IEntityAbout | nu
                         toolbarRender: () => null,
                     }}
                 />
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        background:
+                            'linear-gradient(0deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0) 22.27%)',
+                        pointerEvents: 'none',
+                    }}
+                >
+                    <div
+                        style={{
+                            position: 'absolute',
+                            bottom: 15,
+                            left: 15,
+                            fontWeight: 'bold',
+                            fontSize: '1.1em',
+                        }}
+                    >
+                        <i className="fa-solid fa-play"></i> {formatNumber(item.play_count)}
+                        <br />
+                        <i className="fa-solid fa-heart"></i> {formatNumber(item.like_count)}
+                        <br />
+                        <i className="fa-solid fa-message"></i> {formatNumber(item.comment_count)}
+                    </div>
+                </div>
             </List.Item>
         );
     }, []);
 
     const downloadItem = useCallback((item: IGReel, index: number) => {
-        const hasVideo = !item.video;
+        const hasVideo = !!item.video;
         return {
             url: hasVideo ? item.video : item.image,
             name: item.id + (hasVideo ? '.mp4' : '.jpg'),
@@ -53,7 +82,7 @@ export default function IGReels({ target }: { readonly target: IEntityAbout | nu
 
     return (
         <Collection
-            collectionName={target?.id + ' - IG Reels'}
+            collectionName={target?.igName + ' - IG Reels'}
             fetchNext={fetchNext}
             renderItem={renderItem}
             downloadItem={downloadItem}

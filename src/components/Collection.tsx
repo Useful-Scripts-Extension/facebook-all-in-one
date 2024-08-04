@@ -6,6 +6,7 @@ import Swal, { SweetAlertResult } from 'sweetalert2';
 import { download, showDefaultDownloadFolder } from '../utils/extension';
 import { promiseAllStepN } from '../utils/helper';
 import { trackEvent } from '../utils/facebook';
+import cloneDeep from 'lodash/cloneDeep';
 
 export type Downloadable = {
     name: string;
@@ -59,7 +60,13 @@ export default function Collection<T>({
         const res = await fetchNext(curData);
         console.log(res);
         if (res?.length) {
-            setData([...curData, ...res]);
+            const newData = cloneDeep(curData);
+            for (let item of res) {
+                const index = newData.findIndex(_ => rowKey(_) === rowKey(item));
+                if (index !== -1) newData[index] = item;
+                else newData.push(item);
+            }
+            setData(newData);
             setHasMore(true);
         } else if (res?.length === 0) {
             setHasMore(false);

@@ -48,7 +48,7 @@ export async function getInstaReels(uid = '', cursor = ''): Promise<IGReel[]> {
     const res = await fetchInstaGraphQl({
         fb_api_req_friendly_name: 'PolarisProfileReelsTabContentQuery_connection',
         variables: {
-            after: cursor, // 'QVFBa2xwV0lGMm90bTRtWDRqOFFuNzRjbVI3dEUtYkhIOVJNeldJYVdYaEVFQ0ZUZ1NHTFBBMWhfcS00cF9PaGhsOHFsRThOVk04S3l0N2pGbjRkMEVoSw==',
+            after: cursor,
             before: null,
             data: {
                 include_feed_video: true,
@@ -124,7 +124,7 @@ export async function getInstaPosts(username = '', cursor = ''): Promise<IGPost[
         const res = await fetchInstaGraphQl({
             fb_api_req_friendly_name: 'PolarisProfilePostsTabContentDirectQuery_connection',
             variables: {
-                after: '3359214550639454422_49420310471',
+                after: cursor,
                 before: null,
                 data: {
                     count: 12,

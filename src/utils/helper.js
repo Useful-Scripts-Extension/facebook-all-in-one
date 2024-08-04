@@ -19,11 +19,6 @@ export function objectToCsv(arr) {
     return csvRows.join('\n');
 }
 
-export function numberWithCommas(x) {
-    if (!x) return 0;
-    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
-
 export function formatTime(t) {
     return new Date(parseInt(t)).toLocaleString('en-US', {
         hour: 'numeric',
@@ -159,4 +154,62 @@ export function deepEqual(x, y) {
 
         return true;
     } else return false;
+}
+
+const numberFormatCached = {};
+/**
+ * Get number formatter
+ * @param {string} optionSelect "compactLong", "standard", "compactShort"
+ * @param {string|undefined} locale Browser locale
+ * @return {Intl.NumberFormat}
+ */
+export function getNumberFormatter(optionSelect, locale) {
+    if (!locale) {
+        if (document.documentElement.lang) {
+            locale = document.documentElement.lang;
+        } else if (navigator.language) {
+            locale = navigator.language;
+        } else {
+            try {
+                locale = new URL(
+                    Array.from(document.querySelectorAll("head > link[rel='search']"))
+                        ?.find(n => n?.getAttribute('href')?.includes('?locale='))
+                        ?.getAttribute('href')
+                )?.searchParams?.get('locale');
+            } catch {
+                console.log('Cannot find browser locale. Use en as default for number formatting.');
+                locale = 'en';
+            }
+        }
+    }
+    let formatterNotation;
+    let formatterCompactDisplay;
+    switch (optionSelect) {
+        case 'compactLong':
+            formatterNotation = 'compact';
+            formatterCompactDisplay = 'long';
+            break;
+        case 'standard':
+            formatterNotation = 'standard';
+            formatterCompactDisplay = 'short';
+            break;
+        case 'compactShort':
+        default:
+            formatterNotation = 'compact';
+            formatterCompactDisplay = 'short';
+    }
+
+    let key = locale + formatterNotation + formatterCompactDisplay;
+    if (!numberFormatCached[key]) {
+        const formatter = Intl.NumberFormat(locale, {
+            notation: formatterNotation,
+            compactDisplay: formatterCompactDisplay,
+        });
+        numberFormatCached[key] = formatter;
+    }
+    return numberFormatCached[key];
+}
+
+export function formatNumber(number, optionSelect, locale) {
+    return getNumberFormatter(optionSelect, locale).format(number);
 }

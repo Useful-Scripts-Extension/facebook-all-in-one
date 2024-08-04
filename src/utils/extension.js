@@ -52,10 +52,25 @@ export async function corsInstagram() {
                         value: 'cross-origin',
                     },
                 ],
+                responseHeaders: [
+                    {
+                        header: 'access-control-allow-origin',
+                        operation: 'set',
+                        value: '*',
+                    },
+                    {
+                        header: 'X-Frame-Options',
+                        operation: 'remove',
+                    },
+                    {
+                        header: 'Content-Security-Policy',
+                        operation: 'remove',
+                    },
+                ],
             },
             condition: {
                 urlFilter: '*://*.fna.fbcdn.net/*',
-                resourceTypes: ['image'],
+                resourceTypes: ['image', 'xmlhttprequest', 'media'],
             },
         },
         {
