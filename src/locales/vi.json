@@ -164,6 +164,9 @@
 
         "Facebook response Error": "Facebook trả Lỗi",
         "Browser not supported": "Trình duyệt không hỗ trợ",
-        "File saver API not supported in this browser. Please use newest version of Edge or Chrome. (window.showDirectoryPicker)": "Trình duyệt này không hỗ trợ API lưu file (window.showDirectoryPicker). Vui lòng sử dụng Edge hoặc Chrome bản mới nhất"
+        "File saver API not supported in this browser. Please use newest version of Edge or Chrome. (window.showDirectoryPicker)": "Trình duyệt này không hỗ trợ API lưu file (window.showDirectoryPicker). Vui lòng sử dụng Edge hoặc Chrome bản mới nhất",
+
+        "Enter insta username": "Nhập tên người dùng instagram",
+        "Tip: Get instagram user name here": "Gợi ý: Lấy tên người dùng instagram ở đây"
     }
 }
