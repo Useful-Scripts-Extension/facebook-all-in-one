@@ -221,7 +221,7 @@ export default function BulkDownloader() {
                 if (targetType === TargetType.Group) return <GroupMembers target={about} />;
                 return null;
             case TabKey.IGPosts:
-                return <IGPosts />;
+                return <IGPosts target={about} />;
             case TabKey.IGReels:
                 return <IGReels target={about} />;
             default:

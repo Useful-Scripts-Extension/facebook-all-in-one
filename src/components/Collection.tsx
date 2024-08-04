@@ -24,7 +24,10 @@ export default function Collection<T>({
     readonly renderItem: (data: T, index?: number) => React.ReactNode;
     readonly fetchNext: (currentData?: T[], fromCursor?: string) => Promise<T[] | undefined>;
     readonly rowKey: (data: T) => string;
-    readonly downloadItem?: (item: T, index: number) => Promise<Downloadable> | Downloadable;
+    readonly downloadItem?: (
+        item: T,
+        index: number
+    ) => Promise<Downloadable> | Downloadable | Promise<Downloadable[]> | Downloadable[];
     readonly getItemCursor?: (item: T) => string;
 }) {
     const { t } = useTranslation();
@@ -207,32 +210,37 @@ export default function Collection<T>({
                 10,
                 arr.map((item, i) => async () => {
                     try {
-                        const { url, name } = await downloadItem(item, downloaded);
-                        allLinks.push(url);
+                        let data = await downloadItem(item, downloaded);
+                        if (!Array.isArray(data)) data = [data];
 
-                        if (directDownload) {
-                            const fileNamePrefix = startIndex + index + i + '_';
-                            const fileName = fileNamePrefix + name;
+                        let useDownloadFolder = false;
+                        for (let { url, name } of data) {
+                            allLinks.push(url);
+                            if (directDownload) {
+                                const fileNamePrefix = startIndex + index + i + '_';
+                                const fileName = fileNamePrefix + name;
 
-                            try {
-                                // try download directly, using fetch blob
-                                const blob = await (await fetch(url)).blob();
-                                const fileHandler = await subDir.getFileHandle(fileName, {
-                                    create: true,
-                                });
-                                const writable = await fileHandler.createWritable();
-                                await writable.write(blob);
-                                await writable.close();
-                            } catch (e) {
-                                // backup download: using extension api
-                                await download({
-                                    url: url,
-                                    conflictAction: 'overwrite',
-                                    filename: collectionName + '/' + fileName,
-                                });
-                                downloadedByApi++;
+                                try {
+                                    // try download directly, using fetch blob
+                                    const blob = await (await fetch(url)).blob();
+                                    const fileHandler = await subDir.getFileHandle(fileName, {
+                                        create: true,
+                                    });
+                                    const writable = await fileHandler.createWritable();
+                                    await writable.write(blob);
+                                    await writable.close();
+                                } catch (e) {
+                                    // backup download: using extension api
+                                    await download({
+                                        url: url,
+                                        conflictAction: 'overwrite',
+                                        filename: collectionName + '/' + fileName,
+                                    });
+                                    useDownloadFolder = true;
+                                }
                             }
                         }
+                        if (useDownloadFolder) downloadedByApi++;
                         downloaded++;
                         message.loading({
                             key,

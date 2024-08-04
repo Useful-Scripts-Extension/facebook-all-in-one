@@ -1,6 +1,13 @@
 import { fetchExtension } from './extension';
 import { fetchGraphQl, IEntityAbout, TargetType } from './facebook';
 
+export function fetchInstaGraphQl(
+    params: object | string = {},
+    url: string = 'https://www.instagram.com/graphql/query'
+) {
+    return fetchGraphQl(params, url);
+}
+
 export async function getInstaUserInfo(username: string): Promise<IEntityAbout | null> {
     let res = await fetchExtension(
         'https://www.instagram.com/web/search/topsearch/?query=' + username
@@ -14,11 +21,13 @@ export async function getInstaUserInfo(username: string): Promise<IEntityAbout |
         avatar: user?.profile_pic_url,
         id: user?.id,
         name: user?.full_name || user?.username,
+        igName: username,
         type: TargetType.IGUser,
         url: `https://www.instagram.com/${user?.username}`,
         raw: json,
     };
 }
+
 export type IGReel = {
     id: string;
     type: string;
@@ -30,12 +39,11 @@ export type IGReel = {
 
     play_count: number;
     view_count: number;
-    comment_count: number;
     like_count: number;
+    comment_count: number;
 
     cursor: string;
 };
-
 export async function getInstaReels(uid = '', cursor = ''): Promise<IGReel[]> {
     const res = await fetchInstaGraphQl({
         fb_api_req_friendly_name: 'PolarisProfileReelsTabContentQuery_connection',
@@ -54,9 +62,7 @@ export async function getInstaReels(uid = '', cursor = ''): Promise<IGReel[]> {
     });
     const json = JSON.parse(res);
     console.log('res ne', json);
-    const { edges = [], page_info = {} } =
-        json?.data?.xdt_api__v1__clips__user__connection_v2 || {};
-
+    const { edges = [], page_info = {} } = findDataObject(json) || {};
     return edges.map(edge => {
         const media = edge?.node?.media || {};
         return {
@@ -65,9 +71,7 @@ export async function getInstaReels(uid = '', cursor = ''): Promise<IGReel[]> {
             width: media.original_width,
             height: media.original_height,
 
-            image: media.image_versions2?.candidates?.sort(
-                (a, b) => b.width * b.height - a.width * a.height
-            )?.[0]?.url,
+            image: getBiggestUrl(media.image_versions2?.candidates),
             video: media.video_versions?.find(_ => _.type == 101)?.url,
 
             comment_count: media.comment_count,
@@ -79,10 +83,116 @@ export async function getInstaReels(uid = '', cursor = ''): Promise<IGReel[]> {
         } as IGReel;
     });
 }
+export type IGCarouselItem = {
+    id: string;
+    video: string;
+    image: string;
+};
+export type IGPost = {
+    id: string;
+    caption: string;
+    video: string;
+    image: string;
+    carousel: IGCarouselItem[];
+    created_at: number;
+    like_count: number;
+    comment_count: number;
+    cursor: string;
+};
+export async function getInstaPosts(username = '', cursor = ''): Promise<IGPost[]> {
+    let json;
+    if (!cursor) {
+        // first fetch
+        const res = await fetchInstaGraphQl({
+            fb_api_req_friendly_name: 'PolarisProfilePostsDirectQuery',
+            variables: {
+                data: {
+                    count: 12,
+                    include_relationship_info: true,
+                    latest_besties_reel_media: true,
+                    latest_reel_media: true,
+                },
+                username: username,
+                __relay_internal__pv__PolarisFeedShareMenurelayprovider: true,
+            },
+            doc_id: '7898261790222653',
+        });
+        json = JSON.parse(res);
+        console.log('first fetch', json);
+    } else {
+        // cursor fetch
+        const res = await fetchInstaGraphQl({
+            fb_api_req_friendly_name: 'PolarisProfilePostsTabContentDirectQuery_connection',
+            variables: {
+                after: '3359214550639454422_49420310471',
+                before: null,
+                data: {
+                    count: 12,
+                    include_relationship_info: true,
+                    latest_besties_reel_media: true,
+                    latest_reel_media: true,
+                },
+                first: 12,
+                last: null,
+                username: username,
+                __relay_internal__pv__PolarisFeedShareMenurelayprovider: true,
+            },
+            doc_id: '7935114066569227',
+        });
+        json = JSON.parse(res);
+        console.log('cursor fetch', json);
+    }
 
-export function fetchInstaGraphQl(
-    params: object | string = {},
-    url: string = 'https://www.instagram.com/graphql/query'
-) {
-    return fetchGraphQl(params, url);
+    const { edges = [], page_info = {} } = findDataObject(json) || {};
+    return edges
+        .map(edge => {
+            const node = edge?.node?.media || edge?.node;
+            return {
+                id: node?.id,
+                caption: node?.caption?.text || '',
+                video: getBiggestUrl(node?.video_versions),
+                image: getBiggestUrl(node?.image_versions2?.candidates),
+                carousel: node?.carousel_media?.map(_ => {
+                    return {
+                        id: _.id,
+                        video: getBiggestUrl(_.video_versions),
+                        image: getBiggestUrl(_.image_versions2?.candidates),
+                    };
+                }),
+                created_at: node?.taken_at * 1000,
+                like_count: node?.like_count,
+                comment_count: node?.comment_count,
+                cursor: edge?.cursor || page_info?.end_cursor,
+            } as IGPost;
+        })
+        .filter(_ => _.image || _.video);
+}
+
+function getBiggestUrl(imageOrVideo) {
+    return imageOrVideo?.sort((a, b) => b.width * b.height - a.width * a.height)?.[0]?.url;
+}
+
+function findDataObject(object) {
+    if (!object) return null;
+
+    // Check if the current object has edges and page_info properties
+    if (object.edges && object.page_info) {
+        return object;
+    }
+
+    // Iterate through all keys in the current object
+    for (let key in object) {
+        // Check if the value of the key is an object
+        if (typeof object[key] === 'object' && object[key] !== null) {
+            // Recursively call the function with the nested object
+            let found = findDataObject(object[key]);
+            // If an object is found, return it
+            if (found) {
+                return found;
+            }
+        }
+    }
+
+    // Return null if no object with edges and page_info is found
+    return null;
 }

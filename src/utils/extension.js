@@ -1,5 +1,5 @@
 import { ExtensionID } from '../constants';
-import isEqual from 'lodash/isequal';
+import { deepEqual } from './helper';
 
 export function runExtFunc(fnPath, params) {
     return sendMessage({ action: 'fb_allInOne_runFunc', fnPath, params });
@@ -20,69 +20,113 @@ export function showDefaultDownloadFolder() {
 export async function corsInstagram() {
     const currentRules = await runExtFunc('chrome.declarativeNetRequest.getDynamicRules');
     console.log(currentRules);
-    const rule = {
-        priority: 1,
-        action: {
-            type: 'modifyHeaders',
-            requestHeaders: [
-                {
-                    header: 'referer',
-                    operation: 'set',
-                    value: 'https://www.instagram.com/',
-                },
-                {
-                    header: 'origin',
-                    operation: 'set',
-                    value: 'https://www.instagram.com',
-                },
-                {
-                    header: 'sec-fetch-mode',
-                    operation: 'set',
-                    value: 'no-cors',
-                },
-                {
-                    header: 'sec-fetch-site',
-                    operation: 'set',
-                    value: 'cross-site',
-                },
-                {
-                    header: 'cross-origin-resource-policy',
-                    operation: 'set',
-                    value: 'cross-origin',
-                },
-            ],
-        },
-        condition: {
-            urlFilter: '*://*.fna.fbcdn.net/*',
-            resourceTypes: ['image'],
-        },
-    };
-    const needAddRule = !currentRules.find(_ => {
-        rule.id = _.id;
-        return isEqual(rule, _);
-    });
-    if (!needAddRule) {
-        console.log('already have rule');
-        return false;
-    }
-    const id = await getNextDynamicRuleIds();
-    rule.id = id;
-    const result = await runExtFunc('chrome.declarativeNetRequest.updateDynamicRules', [
+    const rules = [
         {
-            addRules: [rule],
-            removeRuleIds: [rule.id],
+            priority: 1,
+            action: {
+                type: 'modifyHeaders',
+                requestHeaders: [
+                    {
+                        header: 'referer',
+                        operation: 'set',
+                        value: 'https://www.instagram.com/',
+                    },
+                    {
+                        header: 'origin',
+                        operation: 'set',
+                        value: 'https://www.instagram.com',
+                    },
+                    {
+                        header: 'sec-fetch-mode',
+                        operation: 'set',
+                        value: 'no-cors',
+                    },
+                    {
+                        header: 'sec-fetch-site',
+                        operation: 'set',
+                        value: 'cross-site',
+                    },
+                    {
+                        header: 'cross-origin-resource-policy',
+                        operation: 'set',
+                        value: 'cross-origin',
+                    },
+                ],
+            },
+            condition: {
+                urlFilter: '*://*.fna.fbcdn.net/*',
+                resourceTypes: ['image'],
+            },
         },
-    ]);
+        {
+            priority: 1,
+            action: {
+                type: 'modifyHeaders',
+                requestHeaders: [
+                    {
+                        header: 'referer',
+                        operation: 'set',
+                        value: 'https://www.instagram.com/',
+                    },
+                    {
+                        header: 'origin',
+                        operation: 'set',
+                        value: 'https://www.instagram.com',
+                    },
+                    {
+                        header: 'sec-fetch-mode',
+                        operation: 'set',
+                        value: 'no-cors',
+                    },
+                    {
+                        header: 'sec-fetch-site',
+                        operation: 'set',
+                        value: 'cross-site',
+                    },
+                    {
+                        header: 'cross-origin-resource-policy',
+                        operation: 'set',
+                        value: 'cross-origin',
+                    },
+                ],
+            },
+            condition: {
+                requestDomains: ['extension://*'],
+                urlFilter: 'https://www.instagram.com/*',
+                resourceTypes: ['xmlhttprequest'],
+            },
+        },
+    ];
 
-    console.log('added rule', result);
+    const ids = await getNextDynamicRuleIds(rules.length);
+    for (const rule of rules) {
+        const needAddRule = !currentRules.find(_ => {
+            rule.id = _.id;
+            return deepEqual(rule, _);
+        });
+        if (!needAddRule) {
+            console.log('already have rule');
+            continue;
+        }
+        rule.id = ids.shift();
+        try {
+            console.log('added rule', rule);
+            await runExtFunc('chrome.declarativeNetRequest.updateDynamicRules', [
+                {
+                    addRules: [rule],
+                    removeRuleIds: [rule.id],
+                },
+            ]);
+        } catch (e) {
+            // ignore
+        }
+    }
     return true;
 }
 
 export async function getNextDynamicRuleIds(count = 1) {
     const ruleList = await runExtFunc('chrome.declarativeNetRequest.getDynamicRules');
     const ids = new Set(ruleList.map(rule => rule.id));
-
-    console.log(ruleList, ids);
 
     const result = [];
     let nextAvailableId = 1;

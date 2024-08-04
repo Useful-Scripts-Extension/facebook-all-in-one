@@ -200,6 +200,7 @@ export type IEntityAbout = {
     type: TargetType;
     id: string;
     name: string;
+    igName?: string;
     avatar: string;
     url: string;
     raw: any;
