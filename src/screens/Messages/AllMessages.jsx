@@ -11,7 +11,7 @@ import {
     getUserAvatarFromUid,
     trackEvent,
 } from '../../utils/facebook';
-import { numberWithCommas, objectToCsv } from '../../utils/helper';
+import { formatNumberWithCommas, objectToCsv } from '../../utils/helper';
 
 const { Title } = Typography;
 
@@ -224,7 +224,7 @@ export default function AllMessages() {
             dataIndex: 'count',
             key: 'count',
             sorter: (a, b) => a.count - b.count,
-            render: (text, record, index) => numberWithCommas(record.count),
+            render: (text, record, index) => formatNumberWithCommas(record.count),
             width: 100,
             align: 'right',
         },
@@ -233,7 +233,7 @@ export default function AllMessages() {
             dataIndex: 'participants',
             key: 'participants',
             sorter: (a, b) => a.participants.length - b.participants.length,
-            render: (text, record, index) => numberWithCommas(record.participants.length),
+            render: (text, record, index) => formatNumberWithCommas(record.participants.length),
             width: 100,
             align: 'right',
         },
