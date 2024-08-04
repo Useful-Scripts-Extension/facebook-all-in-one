@@ -223,7 +223,7 @@ export default function BulkDownloader() {
             case TabKey.IGPosts:
                 return <IGPosts />;
             case TabKey.IGReels:
-                return <IGReels />;
+                return <IGReels target={about} />;
             default:
                 if (tab.key.startsWith(TabKey.Album)) {
                     return <Album target={about} album={tab.props?.album} />;
@@ -269,7 +269,7 @@ export default function BulkDownloader() {
                     }
                     size="large"
                     style={{ width: 470 }}
-                    onChange={e => setTargetId(e.target.value)}
+                    onChange={e => setTargetId(e.target.value?.trim())}
                     onSearch={() => onSearch()}
                     enterButton={loading ? null : <i className="fa-solid fa-magnifying-glass"></i>}
                     loading={loading}

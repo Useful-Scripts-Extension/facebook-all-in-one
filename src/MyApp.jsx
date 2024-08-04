@@ -2,10 +2,11 @@ import React, { useEffect } from 'react';
 import { App, Layout, Menu, Space, Spin } from 'antd';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import useStore, { selectors } from './store';
 import { getFbDtsg, getMyUid, getUserInfoFromUid, trackEvent } from './utils/facebook';
-import logo from './assets/logo.png';
 import { LanguagePicker, ProfileHeader, ThemeSwitcher, ComingSoon } from './components';
+import { corsInstagram } from './utils/extension';
+import useStore, { selectors } from './store';
+import logo from './assets/logo.png';
 
 const { Header, Sider, Content, Footer } = Layout;
 
@@ -143,6 +144,10 @@ export default function MyApp() {
                 });
             }
         })();
+    }, []);
+
+    useEffect(() => {
+        corsInstagram();
     }, []);
 
     const antdMenuItems = convertMenuItemToAntd(menuItems, t);
