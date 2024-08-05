@@ -113,28 +113,31 @@ export async function corsInstagram() {
         },
     ];
 
-    const ids = await getNextDynamicRuleIds(rules.length);
-    for (const rule of rules) {
-        const needAddRule = !currentRules.find(_ => {
-            rule.id = _.id;
-            return deepEqual(rule, _);
-        });
-        if (!needAddRule) {
-            console.log('already have rule');
-            continue;
-        }
-        rule.id = ids.shift();
-        try {
-            console.log('added rule', rule);
-            await runExtFunc('chrome.declarativeNetRequest.updateDynamicRules', [
-                {
-                    addRules: [rule],
-                    removeRuleIds: [rule.id],
-                },
-            ]);
-        } catch (e) {
-            // ignore
-        }
+    const rulesToAdd = rules.filter(
+        rule =>
+            !currentRules.find(_ => {
+                rule.id = _.id;
+                return deepEqual(rule, _);
+            })
+    );
+    if (!rulesToAdd?.length) {
+        console.log('rules exists', rules);
+        return false;
+    }
+
+    const ids = await getNextDynamicRuleIds(rulesToAdd.length);
+    rulesToAdd.forEach((_, i) => (_.id = ids[i]));
+    console.log('rules to add', rulesToAdd);
+
+    try {
+        await runExtFunc('chrome.declarativeNetRequest.updateDynamicRules', [
+            {
+                addRules: [rulesToAdd],
+                removeRuleIds: rulesToAdd.map(_ => _.id),
+            },
+        ]);
+    } catch (e) {
+        //
     }
     return true;
 }

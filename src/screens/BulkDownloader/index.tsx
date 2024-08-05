@@ -188,7 +188,7 @@ export default function BulkDownloader() {
 
     const onOpenAlbum = (album: IAlbum) => {
         let tabKey = TabKey.Album + album.id;
-        trackEvent('BulkDownloader:onOpenAlbum');
+        trackEvent('BulkDownloader:onOpenAlbum:' + album.id);
         setTabs(prev => [
             ...prev,
             {

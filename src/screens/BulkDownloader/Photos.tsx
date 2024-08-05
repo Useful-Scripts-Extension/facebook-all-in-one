@@ -15,18 +15,11 @@ export default function Photos({ target }: { readonly target: IEntityAbout | nul
     const fetchNext = useCallback(
         async (currentData: IUserPhoto[] = [], fromCursor?: string) => {
             if (!target?.id || !target?.type) return;
+            const cursor = fromCursor || currentData?.[currentData?.length - 1]?.cursor || '';
             const res =
                 target.type === TargetType.Group
-                    ? await getGroupPhotos({
-                          id: target.id,
-                          cursor:
-                              fromCursor || currentData?.[currentData?.length - 1]?.cursor || '',
-                      })
-                    : await getUserPhotos({
-                          id: target.id,
-                          cursor:
-                              fromCursor || currentData?.[currentData?.length - 1]?.cursor || '',
-                      });
+                    ? await getGroupPhotos({ id: target.id, cursor })
+                    : await getUserPhotos({ id: target.id, cursor });
             return res.photos;
         },
         [target]

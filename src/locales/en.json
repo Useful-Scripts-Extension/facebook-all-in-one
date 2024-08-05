@@ -149,7 +149,9 @@
         "Facebook response Error": "Facebook response Error",
         "Browser not supported": "Browser not supported",
         "File saver API not supported in this browser. Please use newest version of Edge or Chrome. (window.showDirectoryPicker)": "File saver API not supported in this browser. Please use newest version of Edge or Chrome. (window.showDirectoryPicker)",
+        "Wrong ID / Entity not found": "Wrong ID / Entity not found",
 
+        "Enter fb id of user/page/group": "Enter fb id of user/page/group",
         "Enter insta username": "Enter insta username",
         "Tip: Get instagram user name here": "Tip: Get instagram user name here"
     }

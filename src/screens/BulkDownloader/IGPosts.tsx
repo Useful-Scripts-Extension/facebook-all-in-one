@@ -113,14 +113,14 @@ export default function IGPosts({ target }: { readonly target: IEntityAbout | nu
     }, []);
 
     const downloadItem = useCallback((item: IGPost, index: number) => {
-        function extract(item) {
+        function extract(item, prefix = '') {
             const hasVideo = !!item.video;
             return {
                 url: hasVideo ? item.video : item.image,
-                name: item.id + (hasVideo ? '.mp4' : '.jpg'),
+                name: prefix + item.id + (hasVideo ? '.mp4' : '.jpg'),
             };
         }
-        if (item.carousel?.length > 0) return item.carousel.map(extract);
+        if (item.carousel?.length > 0) return item.carousel.map((it, i) => extract(it, i + '_'));
         return extract(item);
     }, []);
 

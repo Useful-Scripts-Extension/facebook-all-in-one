@@ -8,12 +8,12 @@ export default function GroupFiles({ target }: { readonly target: IEntityAbout |
     const { t } = useTranslation();
 
     const fetchNext = useCallback(
-        async (currentData: IGroupFile[] = []) => {
+        async (currentData: IGroupFile[] = [], fromCursor?: string) => {
             if (!target?.id || !target?.type) return;
             const lastItem = currentData?.[currentData?.length - 1];
             const res = await getGroupFiles({
                 groupId: target?.id,
-                cursor: lastItem?.cursor || '',
+                cursor: fromCursor || lastItem?.cursor || '',
             });
             return res;
         },
