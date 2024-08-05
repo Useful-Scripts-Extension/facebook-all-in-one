@@ -21,7 +21,7 @@ export async function corsInstagram() {
     const currentRules = await runExtFunc('chrome.declarativeNetRequest.getDynamicRules');
     console.log(currentRules);
     const rules = [
-        {
+        ...['*://*.fna.fbcdn.net/*', '*://*.cdninstagram.com/*'].map(_ => ({
             priority: 1,
             action: {
                 type: 'modifyHeaders',
@@ -69,10 +69,10 @@ export async function corsInstagram() {
                 ],
             },
             condition: {
-                urlFilter: '*://*.fna.fbcdn.net/*',
+                urlFilter: _,
                 resourceTypes: ['image', 'xmlhttprequest', 'media'],
             },
-        },
+        })),
         {
             priority: 1,
             action: {
