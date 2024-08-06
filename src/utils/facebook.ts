@@ -96,7 +96,7 @@ export async function getUfsVersion() {
 }
 
 export async function trackEvent(scriptId: string) {
-    // return;
+    return;
     const text = await fetchExtension('https://useful-script-statistic.glitch.me/count', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
