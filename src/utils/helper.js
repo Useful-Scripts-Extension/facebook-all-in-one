@@ -68,8 +68,8 @@ export function formatSeconds(seconds) {
 
 // modified based on: https://gist.github.com/jcouyang/632709f30e12a7879a73e9e132c0d56b
 export function promiseAllStepN(n, list) {
-    const head = list.slice(0, n);
-    const tail = list.slice(n);
+    const pool = list.slice(0, n);
+    const remains = list.slice(n);
     const resolved = [];
     let stop = false;
 
@@ -77,25 +77,25 @@ export function promiseAllStepN(n, list) {
         start: () =>
             new Promise(resolve => {
                 let processed = 0;
-                function runNext() {
-                    if (processed === tail.length || stop) {
+                function runNext(pool_index) {
+                    if (processed === remains.length || stop) {
                         resolve(Promise.all(resolved));
                         return;
                     }
-                    const promise = tail[processed](processed);
+                    const promise = remains[processed](processed, pool_index);
                     resolved.push(
                         promise.then(result => {
-                            runNext();
+                            runNext(pool_index);
                             return result;
                         })
                     );
                     processed++;
                 }
-                head.forEach(func => {
-                    const promise = func(processed);
+                pool.forEach((func, pool_index) => {
+                    const promise = func(processed, pool_index);
                     resolved.push(
                         promise.then(result => {
-                            runNext();
+                            runNext(pool_index);
                             return result;
                         })
                     );

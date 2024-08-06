@@ -14,7 +14,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { getEntityAbout, IAlbum, IEntityAbout, TargetType, trackEvent } from '../../utils/facebook';
 import { useLocation } from 'react-router-dom';
-import { getInstaUserInfo } from '../../utils/instagram';
+import { getInstaUserInfo, IGHighlight } from '../../utils/instagram';
 import img_getFbId from '../../assets/fb_get_id.png';
 import img_getInstaName from '../../assets/insta_get_username.png';
 import fb_icon from '../../assets/fb_icon.png';
@@ -29,6 +29,8 @@ const GroupFiles = React.lazy(() => import('./GroupFiles'));
 const GroupMembers = React.lazy(() => import('./GroupMembers'));
 const IGPosts = React.lazy(() => import('./IGPosts'));
 const IGReels = React.lazy(() => import('./IGReels'));
+const IGHighlights = React.lazy(() => import('./IGHighlights'));
+const IGHighlightMedias = React.lazy(() => import('./IGHighlightMedias'));
 
 const { Search } = Input;
 
@@ -43,8 +45,10 @@ const enum TabKey {
     GroupMembers = 'Members',
 
     // instagram
-    IGPosts = 'IGPosts',
-    IGReels = 'IGReels',
+    IGPosts = 'IG Posts',
+    IGReels = 'IG Reels',
+    IGHighlights = 'IG Highlights',
+    IGHighlight = 'IG Highlight-',
 }
 
 type Tab = {
@@ -69,6 +73,7 @@ const DefaultFBTabs: Tab[] = [
 ];
 
 const DefaultIGTabs: Tab[] = [
+    { key: TabKey.IGHighlights, label: TabKey.IGHighlights, closable: false },
     { key: TabKey.IGPosts, label: TabKey.IGPosts, closable: false },
     { key: TabKey.IGReels, label: TabKey.IGReels, closable: false },
 ];
@@ -203,6 +208,21 @@ export default function BulkDownloader() {
         setActiveTab(tabKey);
     };
 
+    const onOpenIGHighlight = (highlight: IGHighlight) => {
+        let tabKey = TabKey.IGHighlight + highlight.id;
+        trackEvent('BulkDownloader:onOpenIGHighlight:' + highlight.id);
+        setTabs(prev => [
+            ...prev,
+            {
+                key: tabKey,
+                label: 'IG Highlight: ' + highlight.title,
+                closable: true,
+                props: { highlight },
+            },
+        ]);
+        setActiveTab(tabKey);
+    };
+
     const getComp = (tab: Tab) => {
         switch (tab.key) {
             case TabKey.Photos:
@@ -224,9 +244,14 @@ export default function BulkDownloader() {
                 return <IGPosts target={about} />;
             case TabKey.IGReels:
                 return <IGReels target={about} />;
+            case TabKey.IGHighlights:
+                return <IGHighlights target={about} onOpenHighlight={onOpenIGHighlight} />;
             default:
                 if (tab.key.startsWith(TabKey.Album)) {
                     return <Album target={about} album={tab.props?.album} />;
+                }
+                if (tab.key.startsWith(TabKey.IGHighlight)) {
+                    return <IGHighlightMedias target={about} highlight={tab.props?.highlight} />;
                 }
                 return null;
         }

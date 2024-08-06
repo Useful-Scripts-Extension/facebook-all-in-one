@@ -28,6 +28,7 @@ export async function getInstaUserInfo(username: string): Promise<IEntityAbout |
     };
 }
 
+// #region insta reels
 export type IGReel = {
     id: string;
     type: string;
@@ -83,6 +84,9 @@ export async function getInstaReels(uid = '', cursor = ''): Promise<IGReel[]> {
         } as IGReel;
     });
 }
+// #endregion
+
+// #region insta posts
 export type IGCarouselItem = {
     id: string;
     video: string;
@@ -167,6 +171,71 @@ export async function getInstaPosts(username = '', cursor = ''): Promise<IGPost[
         })
         .filter(_ => _.image || _.video);
 }
+// #endregion
+
+// #region insta highlight
+export type IGHighlight = {
+    id: string;
+    title: string;
+    cover: string;
+};
+export async function getInstaHighlights(uid: string): Promise<IGHighlight[]> {
+    const res = await fetchInstaGraphQl({
+        fb_api_req_friendly_name: 'PolarisProfileStoryHighlightsTrayContentDirectQuery',
+        variables: { user_id: uid },
+        doc_id: '7612410165515693',
+    });
+    const json = JSON.parse(res);
+    const { edges = [], page_info = {} } = findDataObject(json) || {};
+
+    console.log(json);
+
+    return edges.map(
+        edge =>
+            ({
+                id: edge?.node?.id,
+                title: edge?.node?.title,
+                cover: edge?.node?.cover_media?.cropped_image_version?.url,
+            } as IGHighlight)
+    );
+}
+
+export async function getInstaHighlightMedias(highlightId: string): Promise<IGReel[]> {
+    const res = await fetchInstaGraphQl({
+        fb_api_req_friendly_name: 'PolarisStoriesV3HighlightsPageQuery',
+        variables: {
+            initial_reel_id: highlightId,
+            reel_ids: [highlightId],
+            first: 3,
+            last: 2,
+        },
+        doc_id: '7854629807955730',
+    });
+    const json = JSON.parse(res);
+    console.log(json);
+    const { edges = [], page_info = {} } = findDataObject(json) || {};
+
+    return edges?.[0]?.node?.items?.map(item => {
+        const media = item || {};
+        return {
+            id: media.id,
+            type: '',
+            width: media.original_width,
+            height: media.original_height,
+
+            image: getBiggestUrl(media.image_versions2?.candidates),
+            video: media.video_versions?.find(_ => _.type == 101)?.url,
+
+            comment_count: media.comment_count,
+            like_count: media.like_count,
+            play_count: media.play_count,
+            view_count: media.view_count,
+
+            cursor: '',
+        } as IGReel;
+    });
+}
+// #endregion
 
 function getBiggestUrl(imageOrVideo) {
     return imageOrVideo?.sort((a, b) => b.width * b.height - a.width * a.height)?.[0]?.url;

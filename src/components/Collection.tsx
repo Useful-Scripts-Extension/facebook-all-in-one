@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { App, Button, List, Space } from 'antd';
+import { App, Button, Divider, List, Space } from 'antd';
 import { useIntersectionObserver, useInterval } from 'usehooks-ts';
 import { useTranslation } from 'react-i18next';
 import Swal, { SweetAlertResult } from 'sweetalert2';
@@ -20,6 +20,7 @@ export default function Collection<T>({
     rowKey,
     downloadItem,
     getItemCursor,
+    downloadThreads = 5,
 }: {
     readonly collectionName: string;
     readonly renderItem: (data: T, index?: number) => React.ReactNode;
@@ -30,6 +31,7 @@ export default function Collection<T>({
         index: number
     ) => Promise<Downloadable> | Downloadable | Promise<Downloadable[]> | Downloadable[];
     readonly getItemCursor?: (item: T) => string;
+    readonly downloadThreads?: number;
 }) {
     const { t } = useTranslation();
     const { message, notification } = App.useApp();
@@ -185,6 +187,7 @@ export default function Collection<T>({
         message.loading({ key, content: t('Downloading') + '...', duration: 0 });
         const all = fromCursor ? [] : [...data];
         let downloaded = 0,
+            downloadedIncludeChilds = 0,
             failed = 0,
             downloadedByApi = 0,
             index = 0,
@@ -213,18 +216,23 @@ export default function Collection<T>({
             const arr = all.slice(index);
             if (!arr.length) break;
 
+            const pool = Array.from({ length: downloadThreads }, () => '');
+
             const { start, stop: stopQueue } = promiseAllStepN(
-                10,
-                arr.map((item, i) => async () => {
+                downloadThreads,
+                arr.map((item, i) => async (processed, pool_index) => {
                     try {
                         let data = await downloadItem(item, downloaded);
                         if (!Array.isArray(data)) data = [data];
 
                         let useDownloadFolder = false;
-                        for (let { url, name } of data) {
+                        for (let j = 0; j < data.length; j++) {
+                            if (stopFetch) break;
+                            const { url, name } = data[j];
+
                             allLinks.push(url);
                             if (directDownload) {
-                                const fileNamePrefix = startIndex + index + i + '_';
+                                const fileNamePrefix = startIndex + index + j + '_';
                                 const fileName = fileNamePrefix + name;
 
                                 try {
@@ -246,38 +254,70 @@ export default function Collection<T>({
                                     useDownloadFolder = true;
                                 }
                             }
+
+                            downloadedIncludeChilds++;
+
+                            pool[pool_index] =
+                                'thread ' +
+                                (pool_index + 1) +
+                                ': item ' +
+                                (downloaded + i + 1) +
+                                (data.length > 1 ? ` (${j + 1}/${data.length})` : '');
+
+                            message.loading({
+                                key,
+                                content: (
+                                    <span>
+                                        {`${t('Downloading')}... ${downloadedIncludeChilds}`}
+
+                                        {/* render failed */}
+                                        {failed ? (
+                                            <>
+                                                {t('Failed')}: ${failed} <br />
+                                            </>
+                                        ) : (
+                                            ''
+                                        )}
+                                        <br />
+
+                                        {/* rener collection name */}
+                                        {collectionName}
+                                        <br />
+                                        <i>{t('Click to stop')}</i>
+                                        <br />
+                                        <Divider />
+
+                                        {/* render pool */}
+                                        {pool.map((_, _i) => (
+                                            <span
+                                                key={_i}
+                                                style={{
+                                                    width: '100%',
+                                                    textAlign: 'left',
+                                                    display: 'block',
+                                                }}
+                                            >
+                                                {_}
+                                                <br />
+                                            </span>
+                                        ))}
+                                        <br />
+                                    </span>
+                                ),
+                                duration: 0,
+                                onClick: () => {
+                                    stopFetch = true;
+                                    stopQueue();
+                                    message.loading({
+                                        key: stoppingKey,
+                                        content: t('Stopping...'),
+                                        duration: 0,
+                                    });
+                                },
+                            });
                         }
                         if (useDownloadFolder) downloadedByApi++;
                         downloaded++;
-                        message.loading({
-                            key,
-                            content: (
-                                <span>
-                                    {`${t('Downloading')}... ${downloaded}`}
-                                    <br />
-                                    {failed ? (
-                                        <>
-                                            {t('Failed')}: ${failed} <br />
-                                        </>
-                                    ) : (
-                                        ''
-                                    )}
-                                    {collectionName}
-                                    <br />
-                                    <i>{t('Click to stop')}</i>
-                                </span>
-                            ),
-                            duration: 0,
-                            onClick: () => {
-                                stopFetch = true;
-                                stopQueue();
-                                message.loading({
-                                    key: stoppingKey,
-                                    content: t('Stopping...'),
-                                    duration: 0,
-                                });
-                            },
-                        });
                     } catch (e) {
                         failed++;
                         message.error({
@@ -326,7 +366,7 @@ export default function Collection<T>({
                         <b>{t('Folder Name')}:</b> {collectionName}
                     </li>
                     <li>
-                        <b>{t('Downloaded')}:</b> {downloaded}
+                        <b>{t('Downloaded')}:</b> {downloadedIncludeChilds}
                     </li>
                     {downloadedByApi > 0 && (
                         <li>
