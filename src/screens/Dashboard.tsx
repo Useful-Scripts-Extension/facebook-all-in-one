@@ -7,6 +7,24 @@ const updates = [
         text: {
             vi: (
                 <>
+                    Hỗ trơ định dạng <u>.json</u> trong Tải hàng loạt, chứa nhiều thông tin như{' '}
+                    <u>nội dung bài đăng, số like, share, comment, ...</u>
+                </>
+            ),
+            en: (
+                <>
+                    Support download <u>.json</u> in Bulk Downloader, include many infomation{' '}
+                    <u>captions, likes, shares, comments, ...</u>
+                </>
+            ),
+        },
+        // link: 'https://www.facebook.com/groups/1154059318582088/posts/1461600941161256',
+    },
+    {
+        time: '2024-08-07',
+        text: {
+            vi: (
+                <>
                     Hỗ trơ tải tất cả <u>Highlight Instagram</u> trong 1 click
                 </>
             ),
