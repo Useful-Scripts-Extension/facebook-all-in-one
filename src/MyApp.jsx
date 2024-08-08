@@ -10,6 +10,7 @@ import logo from './assets/logo.png';
 
 const { Header, Sider, Content, Footer } = Layout;
 
+const Dashboard = React.lazy(() => import('./screens/Dashboard'));
 const AllMessages = React.lazy(() => import('./screens/Messages/AllMessages'));
 const FirstMessages = React.lazy(() => import('./screens/Messages/FirstMessages'));
 const AllFriends = React.lazy(() => import('./screens/Friends/AllFriends'));
@@ -47,7 +48,7 @@ const menuItems = [
         label: 'Dashboard',
         icon: <i className="fa-solid fa-house"></i>,
         path: '/',
-        element: <ComingSoon name="Dashboard" />,
+        element: <Dashboard />,
     },
     {
         label: 'Messages',
