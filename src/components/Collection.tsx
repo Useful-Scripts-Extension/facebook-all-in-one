@@ -195,7 +195,7 @@ export default function Collection<T>({
             downloadType = dType.value as DownloadType;
         }
 
-        trackEvent('downloadCollection:' + collectionName);
+        trackEvent('downloadCollection:' + downloadType + ':' + collectionName);
 
         // get download destination folder
         const dirHandler = await window.showDirectoryPicker({
