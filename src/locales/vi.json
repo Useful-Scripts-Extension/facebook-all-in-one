@@ -169,6 +169,10 @@
 
         "Enter fb id of user/page/group": "Nhập fb id của user/page/group",
         "Enter insta username": "Nhập tên người dùng instagram",
-        "Tip: Get instagram user name here": "Gợi ý: Lấy tên người dùng instagram ở đây"
+        "Tip: Get instagram user name here": "Gợi ý: Lấy tên người dùng instagram ở đây",
+
+        "Download files": "Tải file",
+        "Download links": "Tải link",
+        "Download .json": "Tải .json"
     }
 }

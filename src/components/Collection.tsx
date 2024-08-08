@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { App, Button, Divider, List, Space } from 'antd';
+import { App, Button, Divider, Dropdown, List, Space } from 'antd';
 import { useIntersectionObserver, useInterval } from 'usehooks-ts';
 import { useTranslation } from 'react-i18next';
 import Swal, { SweetAlertResult } from 'sweetalert2';
@@ -12,6 +12,12 @@ export type Downloadable = {
     name: string;
     url: string;
 };
+
+export enum DownloadType {
+    File = 'file',
+    Link = 'link',
+    JSON = 'json',
+}
 
 export default function Collection<T>({
     collectionName,
@@ -81,7 +87,15 @@ export default function Collection<T>({
         return <Space ref={loadMoreRef}>{renderItem(item, index)}</Space>;
     };
 
-    const downloadAll = async (fromCursor?: string, startIndex = 0) => {
+    const downloadAll = async ({
+        fromCursor,
+        downloadType,
+        startIndex = 0,
+    }: {
+        fromCursor?: string;
+        startIndex?: number;
+        downloadType?: DownloadType;
+    } = {}) => {
         if (!downloadItem) return;
 
         if (!('showDirectoryPicker' in window)) {
@@ -154,18 +168,32 @@ export default function Collection<T>({
         }
 
         // download type
-        const downloadType = await Swal.fire({
-            icon: 'question',
-            title: t('Data type'),
-            text: t('Which data type you want to download?'),
-            showDenyButton: true,
-            showCancelButton: false,
-            confirmButtonText: t('Direct Download'),
-            denyButtonText: t('Only Links'),
-            reverseButtons: true,
-        });
-        if (downloadType.isDismissed) return;
-        let directDownload = downloadType.isConfirmed;
+        if (!downloadType) {
+            const dType = await Swal.fire({
+                icon: 'question',
+                title: t('Data type'),
+                html: `
+                    <label for="download-type">
+                        ${t('Which data type you want to download?')}
+                    </label><br/>
+                    <select
+                        id="download-type"
+                        class="swal2-select"
+                        style="margin: 5px">
+                        ${Object.values(DownloadType)
+                            .map(v => `<option value="${v}">${v}</option>`)
+                            .join('')}
+                    </select>
+                `,
+                preConfirm: () => {
+                    return document.getElementById('download-type')?.value;
+                },
+                showCancelButton: true,
+                reverseButtons: true,
+            });
+            if (dType.isDismissed) return;
+            downloadType = dType.value as DownloadType;
+        }
 
         trackEvent('downloadCollection:' + collectionName);
 
@@ -194,6 +222,7 @@ export default function Collection<T>({
             firstFetch = true,
             stopFetch = false,
             hasMore = true,
+            allJsons: any[] = [],
             allLinks: string[] = [];
 
         while (!stopFetch && hasMore) {
@@ -223,15 +252,17 @@ export default function Collection<T>({
                 arr.map((item, i) => async (processed, pool_index) => {
                     try {
                         let data = await downloadItem(item, downloaded);
-                        if (!Array.isArray(data)) data = [data];
+                        allJsons.push({ data, raw: item });
 
+                        if (!Array.isArray(data)) data = [data];
                         let useDownloadFolder = false;
+
                         for (let j = 0; j < data.length; j++) {
                             if (stopFetch) break;
                             const { url, name } = data[j];
 
                             allLinks.push(url);
-                            if (directDownload) {
+                            if (downloadType === DownloadType.File) {
                                 const fileNamePrefix = startIndex + index + j + '_';
                                 const fileName = fileNamePrefix + name;
 
@@ -330,10 +361,15 @@ export default function Collection<T>({
             index += chunk_downloaded.length;
         }
 
-        if (!directDownload) {
-            const fileHandler = await subDir.getFileHandle('links.txt', { create: true });
+        if (downloadType === DownloadType.JSON || downloadType === DownloadType.Link) {
+            const filename = downloadType === DownloadType.JSON ? 'data.json' : 'links.txt';
+            const data =
+                downloadType === DownloadType.JSON
+                    ? JSON.stringify(allJsons, null, 4)
+                    : allLinks.join('\n');
+            const fileHandler = await subDir.getFileHandle(filename, { create: true });
             const writable = await fileHandler.createWritable();
-            await writable.write(allLinks.join('\n'));
+            await writable.write(data);
             await writable.close();
         }
 
@@ -385,7 +421,15 @@ export default function Collection<T>({
             btn: (
                 <Space direction="horizontal">
                     {stopFetch ? (
-                        <Button onClick={() => downloadAll(cursor, index + startIndex)}>
+                        <Button
+                            onClick={() =>
+                                downloadAll({
+                                    downloadType,
+                                    fromCursor: cursor,
+                                    startIndex: index + startIndex,
+                                })
+                            }
+                        >
                             {t('Continue download')}
                         </Button>
                     ) : null}
@@ -402,10 +446,22 @@ export default function Collection<T>({
         <Space direction="vertical" style={{ width: '100%' }}>
             {downloadItem && data.length > 0 && (
                 <Button.Group style={{ width: '100%', justifyContent: 'center' }}>
-                    <Button type="primary" onClick={() => downloadAll()}>
-                        <i className="fa-solid fa-download fa-lg"></i>
-                        {t('Download')}
-                    </Button>
+                    <Dropdown
+                        menu={{
+                            items: [
+                                { key: DownloadType.File, label: t('Download files') },
+                                { key: DownloadType.Link, label: t('Download links') },
+                                { key: DownloadType.JSON, label: t('Download .json') },
+                            ],
+                            onClick: e => {
+                                downloadAll({ downloadType: e.key as DownloadType });
+                            },
+                        }}
+                    >
+                        <Button type="primary" icon={<i className="fa-solid fa-download"></i>}>
+                            {t('Download')}
+                        </Button>
+                    </Dropdown>
                 </Button.Group>
             )}
             <List

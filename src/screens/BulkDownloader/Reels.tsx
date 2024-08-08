@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { Badge, List, Spin, Typography } from 'antd';
 import { getUserReels, getVideoInfo, IEntityAbout, IReel } from '../../utils/facebook';
-import { formatSeconds } from '../../utils/helper';
+import { formatSeconds, limitString } from '../../utils/helper';
 import Collection from '../../components/Collection';
 import ImageLazyPreview from '../../components/ImageLazyPreview';
 
@@ -61,7 +61,7 @@ export default function Reels({ target }: { readonly target: IEntityAbout | null
                     style={{ maxWidth: '150px', wordWrap: 'break-word' }}
                     onClick={() => window.open(item.url)}
                 >
-                    {item.description}
+                    {limitString(item.description, 100)}
                 </Typography.Paragraph>
             </List.Item>
         );
