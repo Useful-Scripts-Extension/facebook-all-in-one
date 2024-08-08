@@ -18,7 +18,7 @@ const updates = [
                 </>
             ),
         },
-        // link: 'https://www.facebook.com/groups/1154059318582088/posts/1461600941161256',
+        link: 'https://www.facebook.com/groups/1154059318582088/posts/1462371741084176',
     },
     {
         time: '2024-08-07',
