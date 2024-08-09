@@ -3,6 +3,13 @@ import { useTranslation } from 'react-i18next';
 
 const updates = [
     {
+        time: '2024-08-09',
+        text: {
+            vi: <>Sửa lỗi tải hàng loạt post instagram bị lặp lại, không tự dừng khi hết post</>,
+            en: <>Fix bug: Duplicate when bulk download Instagram's posts</>,
+        },
+    },
+    {
         time: '2024-08-08',
         text: {
             vi: (
@@ -133,6 +140,33 @@ const updates = [
         link: 'https://www.facebook.com/groups/1154059318582088/posts/1434276953893655',
     },
     {
+        time: '2024-07-20',
+        text: {
+            vi: (
+                <>
+                    Ra mắt chức năng <u>Quản lý tin nhắn</u> / <u>Quản lý bạn bè</u>
+                    <br />
+                    <ul>
+                        <li>Kết bạn / huỷ kết bạn / chọc hàng loạt</li>
+                        <li>Lọc bạn bè bị khoá / bị chặn tin nhắn</li>
+                        <li>Xem ai huỷ kết bạn với bạn</li>
+                    </ul>
+                </>
+            ),
+            en: (
+                <>
+                    Introduce feature <u>Messages Manager</u> / <u>Friends Manager</u>
+                    <br />
+                    <ul>
+                        <li>Bulk make friends / unfirends / pokes</li>
+                        <li>Filter inactive friends / blocked messages friends</li>
+                        <li>See who unfriend you</li>
+                    </ul>
+                </>
+            ),
+        },
+    },
+    {
         time: '2024-06-18',
         text: {
             vi: <>Bắt đầu code + Tìm người code chung</>,
@@ -157,6 +191,24 @@ export default function Dashboard() {
             {t({
                 vi: (
                     <>
+                        <h2>☝️🚨 CHÚ Ý</h2>
+                        <h2>
+                            Bạn cần cài đặt{' '}
+                            <a
+                                target="_blank"
+                                href="https://github.com/Useful-Scripts-Extension/useful-script"
+                            >
+                                Useful script Extension
+                            </a>{' '}
+                            trước mới có thể sử dụng trang web này.{' '}
+                            <a
+                                target="_blank"
+                                href="https://www.facebook.com/groups/1154059318582088/permalink/1453443235310360"
+                            >
+                                Hướng dẫn
+                            </a>
+                        </h2>
+                        <br />
                         <h2>⭐ Giới thiệu</h2>
                         <h3>
                             Là 1 công cụ chứa rất nhiều chức năng hữu ích dành cho Facebook /
@@ -174,15 +226,34 @@ export default function Dashboard() {
                             </a>{' '}
                             để được hỗ trợ
                         </h3>
+
                         <br />
                         <h2>⭐ Cập nhật mới</h2>
                     </>
                 ),
                 en: (
                     <>
+                        <h2>☝️🚨 WARNING</h2>
+                        <h2>
+                            You need to install{' '}
+                            <a
+                                target="_blank"
+                                href="https://github.com/Useful-Scripts-Extension/useful-script"
+                            >
+                                Useful script Extension
+                            </a>{' '}
+                            first to able to use this tools.{' '}
+                            <a
+                                target="_blank"
+                                href="https://www.facebook.com/groups/1154059318582088/permalink/1453443235310360"
+                            >
+                                Install tutorial
+                            </a>
+                        </h2>
+                        <br />
                         <h2>⭐ What is this?</h2>
                         <h3>This website is a All in one tools for Facebook / Instagram</h3>
-                        <h3>All features are show in the left Menu</h3>
+                        <h3>All features are show in the left side Menu</h3>
                         <br />
                         <h3>
                             Plese join{' '}
@@ -194,15 +265,18 @@ export default function Dashboard() {
                             </a>{' '}
                             if you need help
                         </h3>
+
                         <br />
                         <h2>⭐ Lastest updates</h2>
                     </>
                 ),
             })}
-
             {updates.map((u, i) => (
                 <h3 key={'update' + i}>
-                    <i>{u.time}:</i> {t(u.text)}{' '}
+                    <i style={{ opacity: 0.5 }}>
+                        <b>{u.time}:</b>
+                    </i>{' '}
+                    {t(u.text)}{' '}
                     {u.link ? (
                         <>
                             -{' '}
