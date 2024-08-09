@@ -4,9 +4,8 @@ import { useIntersectionObserver, useInterval } from 'usehooks-ts';
 import { useTranslation } from 'react-i18next';
 import Swal, { SweetAlertResult } from 'sweetalert2';
 import { download, showDefaultDownloadFolder } from '../utils/extension';
-import { promiseAllStepN } from '../utils/helper';
+import { downloadData, promiseAllStepN, removeDuplicate } from '../utils/helper';
 import { trackEvent } from '../utils/facebook';
-import cloneDeep from 'lodash/cloneDeep';
 
 export type Downloadable = {
     name: string;
@@ -65,22 +64,15 @@ export default function Collection<T>({
         if (fetchingRef.current) return;
         fetchingRef.current = true;
 
-        const res = await fetchNext(curData);
-        console.log(res);
-        if (res?.length) {
-            const newData = cloneDeep(curData);
-            let hasNew = false;
-            for (let item of res) {
-                const index = newData.findIndex(_ => rowKey(_) === rowKey(item));
-                if (index !== -1) newData[index] = item;
-                else {
-                    newData.push(item);
-                    hasNew = true;
-                }
+        const items = await fetchNext(curData);
+        console.log(items);
+        if (items?.length) {
+            const newItems = removeDuplicate(curData, items, rowKey);
+            setHasMore(newItems.length > 0);
+            if (newItems.length) {
+                setData([...curData, ...newItems]);
             }
-            setData(newData);
-            setHasMore(hasNew);
-        } else if (res?.length === 0) {
+        } else if (items?.length === 0) {
             setHasMore(false);
         }
         fetchingRef.current = false;
@@ -102,7 +94,7 @@ export default function Collection<T>({
     } = {}) => {
         if (!downloadItem) return;
 
-        if (!('showDirectoryPicker' in window)) {
+        if (!('showDirectoryPicker' in window) && downloadType === DownloadType.File) {
             return Swal.fire({
                 icon: 'error',
                 title: t('Browser not supported'),
@@ -112,24 +104,26 @@ export default function Collection<T>({
             });
         }
 
-        // download position
-        let downloadPosition: SweetAlertResult | undefined;
+        // continue download
+        let continueDownload: SweetAlertResult | undefined;
         if (!fromCursor) {
-            downloadPosition = await Swal.fire({
+            continueDownload = await Swal.fire({
                 icon: 'question',
                 title: t('Download') + '?',
                 text: collectionName,
                 showDenyButton: true,
                 showCancelButton: false,
-                confirmButtonText: t('Download all'),
-                denyButtonText: t('Download from cursor'),
-                reverseButtons: true,
+                confirmButtonColor: '#d33',
+                denyButtonColor: '#1668dc',
+                confirmButtonText: t('Download from cursor'),
+                denyButtonText: t('Download all'),
+                // reverseButtons: true,
             });
-            if (downloadPosition.isDismissed) return;
+            if (continueDownload.isDismissed) return;
         }
 
-        // config
-        if (!downloadPosition || downloadPosition.isDenied) {
+        // config for continue download
+        if (continueDownload?.isConfirmed) {
             const config = await Swal.fire({
                 icon: 'info',
                 title: t('Download from cursor'),
@@ -202,16 +196,19 @@ export default function Collection<T>({
         trackEvent('downloadCollection:' + downloadType + ':' + collectionName);
 
         // get download destination folder
-        const dirHandler = await window.showDirectoryPicker({
-            mode: 'readwrite',
-            // startIn: 'downloads',
-        });
-        await dirHandler.requestPermission({ writable: true });
+        let subDir: any;
+        if (downloadType === DownloadType.File) {
+            const dirHandler = await window.showDirectoryPicker({
+                mode: 'readwrite',
+                // startIn: 'downloads',
+            });
+            await dirHandler.requestPermission({ writable: true });
 
-        // create folder with collection name
-        const subDir = await dirHandler.getDirectoryHandle(collectionName, {
-            create: true,
-        });
+            // create folder with collection name
+            subDir = await dirHandler.getDirectoryHandle(collectionName, {
+                create: true,
+            });
+        }
 
         // start fetch and download
         const key = 'downloading_collection_' + collectionName;
@@ -230,7 +227,8 @@ export default function Collection<T>({
             allLinks: string[] = [];
 
         while (!stopFetch && hasMore) {
-            const chunk = await fetchNext(all, firstFetch ? fromCursor : undefined);
+            const _chunk = await fetchNext(all, firstFetch ? fromCursor : undefined);
+            const chunk = removeDuplicate(all, _chunk, rowKey);
             if (!chunk?.length && firstFetch && fromCursor) {
                 notification.error({
                     type: 'error',
@@ -366,15 +364,13 @@ export default function Collection<T>({
         }
 
         if (downloadType === DownloadType.JSON || downloadType === DownloadType.Link) {
-            const filename = downloadType === DownloadType.JSON ? 'data.json' : 'links.txt';
+            const filename =
+                collectionName + (downloadType === DownloadType.JSON ? '.json' : '.txt');
             const data =
                 downloadType === DownloadType.JSON
                     ? JSON.stringify(allJsons, null, 4)
                     : allLinks.join('\n');
-            const fileHandler = await subDir.getFileHandle(filename, { create: true });
-            const writable = await fileHandler.createWritable();
-            await writable.write(data);
-            await writable.close();
+            downloadData(data, filename);
         }
 
         // show result

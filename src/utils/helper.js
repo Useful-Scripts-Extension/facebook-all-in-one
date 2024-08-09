@@ -213,3 +213,36 @@ export function getNumberFormatter(optionSelect, locale) {
 export function formatNumber(number, optionSelect, locale) {
     return getNumberFormatter(optionSelect, locale).format(number);
 }
+
+export function removeDuplicate(
+    currentData = [],
+    newData = [],
+    getKeyFn = item => item.id || item
+) {
+    // remove all dup data in newDate (dup with currentData)
+    const result = [];
+    for (const item of newData) {
+        const key = getKeyFn(item);
+        const index = currentData.findIndex(_ => getKeyFn(_) === key);
+        if (index === -1) result.push(item);
+    }
+    return result;
+}
+
+export function downloadData(data, filename, type = 'text/plain') {
+    let file = new Blob([data], { type: type });
+    if (typeof window?.navigator?.msSaveOrOpenBlob == 'function')
+        window.navigator.msSaveOrOpenBlob(file, filename);
+    else {
+        let a = document.createElement('a'),
+            url = URL.createObjectURL(file);
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }, 0);
+    }
+}
