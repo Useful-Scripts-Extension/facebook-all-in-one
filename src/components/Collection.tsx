@@ -69,13 +69,17 @@ export default function Collection<T>({
         console.log(res);
         if (res?.length) {
             const newData = cloneDeep(curData);
+            let hasNew = false;
             for (let item of res) {
                 const index = newData.findIndex(_ => rowKey(_) === rowKey(item));
                 if (index !== -1) newData[index] = item;
-                else newData.push(item);
+                else {
+                    newData.push(item);
+                    hasNew = true;
+                }
             }
             setData(newData);
-            setHasMore(true);
+            setHasMore(hasNew);
         } else if (res?.length === 0) {
             setHasMore(false);
         }
