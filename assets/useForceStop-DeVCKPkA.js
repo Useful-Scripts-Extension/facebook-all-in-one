@@ -1,0 +1,1 @@
+import{r as e}from"./index-CX461bZ7.js";function o(){const r=e.useRef(()=>{});return e.useEffect(()=>()=>r.current(),[]),{start(){r.current();let t=!1;return r.current=()=>{t=!0},{value(){return t},stop(){t=!0}}},stop(){r.current()}}}export{o as u};
