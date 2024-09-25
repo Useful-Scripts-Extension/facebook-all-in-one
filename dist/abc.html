@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <h1>FB AIO</h1>
+    <label for="uid">UID</label>: <input id="uid" type="text"><br />
+    <label for="name">Name</label>: <input id="name" type="text"><br />
+    <label for="date">Date</label>: <input id="date" type="date"><br />
+    <label for="password">Password</label>: <input id="password" type="password"><br />
+    <button id="submit">Submit</button>
+    <button id="allData">All data</button>
+
+    <script>
+        const uid = document.getElementById("uid");
+        const username = document.getElementById("name");
+        const date = document.getElementById("date");
+        const password = document.getElementById("password");
+        const submitBtn = document.querySelector("#submit");
+        const allDataBtn = document.querySelector("#allData");
+
+        date.setAttribute('min', new Date().toISOString().split("T")[0]);
+
+        const nextMonth = new Date();
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+        date.setAttribute('value', nextMonth.toISOString().split("T")[0]);
+
+        allDataBtn.addEventListener("click", () => {
+            if (!password.value) {
+                alert("Password is required");
+                return;
+            }
+            window.open("https://useful-script-statistic.glitch.me/allVIP?password=" + password.value, "_blank")
+        });
+
+        submitBtn.addEventListener("click", () => {
+            if (!uid.value || !username.value || !date.value || !password.value) {
+                alert("All fields are required");
+                return;
+            }
+
+            const today = new Date();
+            const selectedDate = new Date(date.value);
+            selectedDate.setHours(today.getHours(), today.getMinutes(), today.getSeconds());
+
+            window.open(
+                `https://useful-script-statistic.glitch.me/addVIP?uid=${uid.value}&name=${username.value}&expireTime=${selectedDate.getTime()}&password=${password.value}`,
+                "_blank")
+        });
+    </script>
+</body>
+
+</html>
