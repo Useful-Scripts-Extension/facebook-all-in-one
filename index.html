@@ -29,8 +29,29 @@
 
     gtag('config', 'G-0MQRTEC81L');
   </script>
-  <script type="module" crossorigin src="./assets/index-q1tSS-rR.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-D4bPfP-I.css">
+
+  <!-- Download Canny SDK -->
+  <script>
+    ! function (w, d, i, s) {
+      function l() {
+        if (!d.getElementById(i)) {
+          var f = d.getElementsByTagName(s)[0],
+            e = d.createElement(s);
+          e.type = "text/javascript", e.async = !0, e.src = "https://canny.io/sdk.js", f.parentNode.insertBefore(e, f)
+        }
+      }
+      if ("function" != typeof w.Canny) {
+        var c = function () {
+          c.q.push(arguments)
+        };
+        c.q = [], w.Canny = c, "complete" === d.readyState ? l() : w.attachEvent ? w.attachEvent("onload", l) : w
+          .addEventListener("load", l, !1)
+      }
+    }(window, document, "canny-jssdk", "script");
+  </script>
+
+  <script type="module" crossorigin src="./assets/index-BzHjJZ6J.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-CKPZ9v0x.css">
 </head>
 
 <body>
