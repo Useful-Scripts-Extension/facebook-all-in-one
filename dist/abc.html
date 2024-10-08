@@ -5,6 +5,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+
+    <style>
+        table,
+        th,
+        td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            padding: 5px
+        }
+
+        #all-data-container {
+            padding-top: 20px;
+        }
+    </style>
 </head>
 
 <body>
@@ -12,45 +26,102 @@
     <label for="uid">UID</label>: <input id="uid" type="text"><br />
     <label for="name">Name</label>: <input id="name" type="text"><br />
     <label for="date">Date</label>: <input id="date" type="date"><br />
-    <label for="password">Password</label>: <input id="password" type="password"><br />
+    <label for="password">Password</label>: <input id="password" type="password" value=""><br />
     <button id="submit">Submit</button>
     <button id="allData">All data</button>
 
+    <div id="all-data-container"></div>
+
     <script>
-        const uid = document.getElementById("uid");
-        const username = document.getElementById("name");
-        const date = document.getElementById("date");
-        const password = document.getElementById("password");
+        const inp_uid = document.getElementById("uid");
+        const inp_username = document.getElementById("name");
+        const inp_date = document.getElementById("date");
+        const inp_password = document.getElementById("password");
         const submitBtn = document.querySelector("#submit");
         const allDataBtn = document.querySelector("#allData");
+        const allDataContainer = document.querySelector("#all-data-container");
 
-        date.setAttribute('min', new Date().toISOString().split("T")[0]);
+        inp_date.setAttribute('min', new Date().toISOString().split("T")[0]);
 
         const nextMonth = new Date();
-        nextMonth.setMonth(nextMonth.getMonth() + 1);
-        date.setAttribute('value', nextMonth.toISOString().split("T")[0]);
+        // nextMonth.setMonth(nextMonth.getMonth() + 1);
+        inp_date.setAttribute('value', nextMonth.toISOString().split("T")[0]);
 
-        allDataBtn.addEventListener("click", () => {
-            if (!password.value) {
+        allDataBtn.addEventListener("click", async () => {
+            if (!inp_password.value) {
                 alert("Password is required");
                 return;
             }
-            window.open("https://useful-script-statistic.glitch.me/allVIP?password=" + password.value, "_blank")
+            const url = "https://useful-script-statistic.glitch.me/allVIP?password=" + inp_password.value;
+            const res = await fetch(url);
+            const text = await res.text();
+            console.log(text)
+            const json = JSON.parse(text);
+
+            const data = json
+                .map((_) => ({
+                    daysLeft: Math.round(
+                        (new Date(parseInt(_[1])).getTime() - new Date().getTime()) /
+                        1000 /
+                        60 /
+                        60 /
+                        24
+                    ),
+                    dateStr: new Date(parseInt(_[1])).toLocaleString(),
+                    date: _[1],
+                    uid: _[0],
+                    name: _[2]
+                }))
+                .sort((a, b) => a.daysLeft - b.daysLeft);
+            console.log(data)
+
+            allDataContainer.innerHTML = `<table>
+                <tr>
+                    <th>Days left</th>
+                    <th>Date</th>
+                    <th>UID</th>
+                    <th>Name</th>
+                    <th>Update</th>
+                </tr>
+                <tbody>
+                    ${data
+                .map((_) => `
+                <tr>
+                    <td>${_.daysLeft}</td>
+                    <td>${_.dateStr}</td>
+                    <td> <a href="https://facebook.com/${_.uid}"> ${_.uid} </a></td>
+                    <td>${_.name}</td>
+                    <td>
+                        <button data-update="${_.uid};${_.name};${_.date}">Update</button>
+                </tr>`)
+                .join(" ")}
+                </tbody>
+            </table>`;
+
         });
 
         submitBtn.addEventListener("click", () => {
-            if (!uid.value || !username.value || !date.value || !password.value) {
+            if (!inp_uid.value || !inp_username.value || !inp_date.value || !inp_password.value) {
                 alert("All fields are required");
                 return;
             }
 
             const today = new Date();
-            const selectedDate = new Date(date.value);
+            const selectedDate = new Date(inp_date.value);
             selectedDate.setHours(today.getHours(), today.getMinutes(), today.getSeconds());
 
             window.open(
-                `https://useful-script-statistic.glitch.me/addVIP?uid=${uid.value}&name=${username.value}&expireTime=${selectedDate.getTime()}&password=${password.value}`,
+                `https://useful-script-statistic.glitch.me/addVIP?uid=${inp_uid.value}&name=${inp_username.value}&expireTime=${selectedDate.getTime()}&password=${inp_password.value}`,
                 "_blank")
+        });
+
+        document.addEventListener("click", (e) => {
+            if (e.target.dataset.update) {
+                const [uid, name, date] = e.target.dataset.update.split(";");
+                inp_uid.value = uid;
+                inp_username.value = name;
+                inp_date.value = date;
+            }
         });
     </script>
 </body>
