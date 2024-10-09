@@ -26,7 +26,7 @@
     <label for="uid">UID</label>: <input id="uid" type="text"><br />
     <label for="name">Name</label>: <input id="name" type="text"><br />
     <label for="date">Date</label>: <input id="date" type="date"><br />
-    <label for="password">Password</label>: <input id="password" type="password" value=""><br />
+    <label for="password">Password</label>: <input id="password" type="password" value="hoanghienhy"><br />
     <button id="submit">Submit</button>
     <button id="allData">All data</button>
 
@@ -59,7 +59,8 @@
             const json = JSON.parse(text);
 
             const data = json
-                .map((_) => ({
+                .map((_, i) => ({
+                    i,
                     daysLeft: Math.round(
                         (new Date(parseInt(_[1])).getTime() - new Date().getTime()) /
                         1000 /
@@ -72,12 +73,14 @@
                     uid: _[0],
                     name: _[2]
                 }))
-                .sort((a, b) => a.daysLeft - b.daysLeft);
+            // .sort((a, b) => a.daysLeft - b.daysLeft);
             console.log(data)
 
-            allDataContainer.innerHTML = `<table>
+            allDataContainer.innerHTML = `
+            <table>
                 <tr>
-                    <th>Days left</th>
+                    <th onclick="sortTable(0)">#</th>
+                    <th onclick="sortTable(1)">Days left</th>
                     <th>Date</th>
                     <th>UID</th>
                     <th>Name</th>
@@ -87,6 +90,7 @@
                     ${data
                 .map((_) => `
                 <tr>
+                    <td>${_.i + 1}</td>
                     <td>${_.daysLeft}</td>
                     <td>${_.dateStr}</td>
                     <td> <a target="_blank" href="https://fb.com/${_.uid}"> ${_.uid} </a></td>
@@ -123,6 +127,62 @@
                 inp_date.value = date;
             }
         });
+
+        // https://www.w3schools.com/howto/howto_js_sort_table.asp
+        function sortTable(n) {
+            var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            table = document.querySelector("#all-data-container table");
+            switching = true;
+            // Set the sorting direction to ascending:
+            dir = "asc";
+            /* Make a loop that will continue until
+            no switching has been done: */
+            while (switching) {
+                // Start by saying: no switching is done:
+                switching = false;
+                rows = table.rows;
+                /* Loop through all table rows (except the
+                first, which contains table headers): */
+                for (i = 1; i < (rows.length - 1); i++) {
+                    // Start by saying there should be no switching:
+                    shouldSwitch = false;
+                    /* Get the two elements you want to compare,
+                    one from current row and one from the next: */
+                    x = rows[i].getElementsByTagName("TD")[n];
+                    y = rows[i + 1].getElementsByTagName("TD")[n];
+                    /* Check if the two rows should switch place,
+                    based on the direction, asc or desc: */
+                    if (dir == "asc") {
+                        if (parseInt(x.innerHTML) > parseInt(y.innerHTML)) {
+                            // If so, mark as a switch and break the loop:
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else if (dir == "desc") {
+                        if (parseInt(x.innerHTML) < parseInt(y.innerHTML)) {
+                            // If so, mark as a switch and break the loop:
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                }
+                if (shouldSwitch) {
+                    /* If a switch has been marked, make the switch
+                    and mark that a switch has been done: */
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    // Each time a switch is done, increase this count by 1:
+                    switchcount++;
+                } else {
+                    /* If no switching has been done AND the direction is "asc",
+                    set the direction to "desc" and run the while loop again. */
+                    if (switchcount == 0 && dir == "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
+            }
+        }
     </script>
 </body>
 
